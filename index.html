@@ -169,7 +169,7 @@
 
   <div class="main">
     <aside class="left-aside">
-      <h2>👥 Petani — Lahan &amp; Bibit (<span id="recipient-total-count">57</span>)</h2>
+      <h2>👥 Daftar Petani (<span id="recipient-total-count">57</span>)</h2>
       <input type="text" class="search-box" id="recipient-search" placeholder="Cari nama petani...">
       <div class="recipient-count" id="recipient-count-text"></div>
       <div class="recipient-list" id="recipient-list"></div>
@@ -514,7 +514,7 @@ function renderRecipients(){
       listEl.appendChild(card);
     });
 
-  document.getElementById('recipient-count-text').textContent = `Menampilkan ${shown} dari ${DATA.recipients.length} penerima`;
+  document.getElementById('recipient-count-text').textContent = `Menampilkan ${shown} dari ${DATA.recipients.length} petani (${DATA.summary.total_ba_recipients} penerima bibit + 14 lahan tanpa data BA)`;
 }
 
 document.getElementById('recipient-search').addEventListener('input', renderRecipients);
