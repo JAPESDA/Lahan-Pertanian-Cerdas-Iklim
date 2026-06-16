@@ -23,7 +23,11 @@
   header h1 span{color:var(--accent);}
   header .meta{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted);}
   .main{display:flex;flex:1;min-height:0;}
-  #map{flex:1;background:#0d1117;}
+  #map{flex:1;background:#0d1117;position:relative;}
+  #loading-banner{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+    z-index:1000;background:rgba(22,27,34,.95);border:1px solid var(--border);border-radius:8px;
+    padding:12px 22px;font-size:13px;color:var(--text);box-shadow:0 4px 16px rgba(0,0,0,.4);
+    max-width:80%;text-align:center;}
   aside{width:340px;flex-shrink:0;background:var(--panel);border-left:1px solid var(--border);
     overflow-y:auto;padding:14px;font-size:12.5px;}
   aside h2{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);
@@ -169,12 +173,12 @@
 
   <div class="main">
     <aside class="left-aside">
-      <h2>👥 Daftar Petani (<span id="recipient-total-count">57</span>)</h2>
+      <h2>👥 Petani — Lahan &amp; Bibit (<span id="recipient-total-count">57</span>)</h2>
       <input type="text" class="search-box" id="recipient-search" placeholder="Cari nama petani...">
       <div class="recipient-count" id="recipient-count-text"></div>
       <div class="recipient-list" id="recipient-list"></div>
     </aside>
-    <div id="map"></div>
+    <div id="map"><div id="loading-banner">⏳ Memuat data...</div></div>
     <aside>
       <h2>🔍 Filter Data</h2>
       <span class="filter-label">Desa</span>
@@ -261,8 +265,167 @@
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
 <script>
-const DATA = {"polygons": [{"id_individu": "ID000001", "id_lahan": "L0069", "nama": "Abd Rahman Usman", "gender": "L", "desa": "DS001", "luas_ha": 0.35, "unconfirmed": false, "centroid": [0.6901958012816175, 123.16330590263222], "coordinates": [[0.690607, 123.163262], [0.690531, 123.162955], [0.689957, 123.163212], [0.689874, 123.163257], [0.689824, 123.163407], [0.689876, 123.163689], [0.690614, 123.16326], [0.690607, 123.163262]], "bibit": {"total": 40, "durian": 24, "alpukat": 16, "mangga": 0, "rambutan": 0, "pala": 0, "tanggal": "2026-06-05", "bulan": "Juni 2026"}, "source": "trk"}, {"id_individu": "ID000066", "id_lahan": "L0053", "nama": "Aripin Abdulah", "gender": "L", "desa": "DS001", "luas_ha": 0.5636, "unconfirmed": false, "centroid": [0.693240733082817, 123.15463957883813], "coordinates": [[0.693712, 123.154733], [0.692988, 123.155045], [0.692717, 123.154566], [0.693517, 123.154235], [0.69375, 123.154715], [0.6936, 123.154783], [0.693712, 123.154733]], "bibit": {"total": 40, "durian": 24, "alpukat": 16, "mangga": 0, "rambutan": 0, "pala": 0, "tanggal": null, "bulan": null}, "source": "trk"}, {"id_individu": "ID000034", "id_lahan": "L0031", "nama": "Arman Usman", "gender": "L", "desa": "DS001", "luas_ha": 0.2427, "unconfirmed": false, "centroid": [0.6973079507709203, 123.17917249808322], "coordinates": [[0.697249, 123.178933], [0.697049, 123.17896], [0.697102, 123.179296], [0.697319, 123.179424], [0.69735, 123.179442], [0.697416, 123.179445], [0.697461, 123.179431], [0.697532, 123.179402], [0.69756, 123.17938], [0.697568, 123.179363], [0.697426, 123.178903], [0.697252, 123.17893], [0.697249, 123.178933]], "bibit": null, "source": "trk"}, {"id_individu": "ID000043", "id_lahan": "L0070", "nama": "Dandi Salim", "gender": "L", "desa": "DS001", "luas_ha": 0.4266, "unconfirmed": false, "centroid": [0.6891712600855543, 123.16436058748653], "coordinates": [[0.688821, 123.164256], [0.689357, 123.163955], [0.689556, 123.164522], [0.689033, 123.164697], [0.688985, 123.164715], [0.688755, 123.164298], [0.68882, 123.164256], [0.688821, 123.164256]], "bibit": null, "source": "trk"}, {"id_individu": "ID000038", "id_lahan": "L0047", "nama": "Hadija Daud", "gender": "P", "desa": "DS001", "luas_ha": 1.9886, "unconfirmed": false, "centroid": [0.6987736964500165, 123.17839609643438], "coordinates": [[0.699354, 123.177448], [0.698571, 123.177958], [0.69848, 123.177997], [0.698365, 123.178031], [0.698156, 123.178064], [0.697986, 123.178095], [0.698097, 123.179113], [0.699469, 123.178859], [0.699361, 123.177443], [0.699354, 123.177448]], "bibit": null, "source": "trk"}, {"id_individu": "ID000013", "id_lahan": "L0066", "nama": "Hadija Maino", "gender": "P", "desa": "DS001", "luas_ha": 0.0288, "unconfirmed": false, "centroid": [0.6893727198104216, 123.16082586626155], "coordinates": [[0.689461, 123.160853], [0.689484, 123.16081], [0.689424, 123.160735], [0.689397, 123.16074], [0.689345, 123.16078], [0.689279, 123.160791], [0.689266, 123.160861], [0.689319, 123.160904], [0.689368, 123.160906], [0.689435, 123.160863], [0.68946, 123.160852], [0.689461, 123.160853]], "bibit": {"total": 40, "durian": 24, "alpukat": 16, "mangga": 0, "rambutan": 0, "pala": 0, "tanggal": "2026-06-08", "bulan": "Juni 2026"}, "source": "trk"}, {"id_individu": "ID000039", "id_lahan": "L0072", "nama": "Herlina Zubair", "gender": "P", "desa": "DS001", "luas_ha": 0.7433, "unconfirmed": false, "centroid": [0.6966366086099988, 123.17858404261594], "coordinates": [[0.696995, 123.178452], [0.697205, 123.17882], [0.69661, 123.179138], [0.696523, 123.178766], [0.695947, 123.178497], [0.696594, 123.178055], [0.696762, 123.178328], [0.696816, 123.178342], [0.696905, 123.178304], [0.696996, 123.178443], [0.696995, 123.178452]], "bibit": null, "source": "trk"}, {"id_individu": "ID000173", "id_lahan": "L0068", "nama": "Husain Lamalani", "gender": "L", "desa": "DS001", "luas_ha": 0.5104, "unconfirmed": false, "centroid": [0.6926900381758053, 123.16352050489402], "coordinates": [[0.692278, 123.163316], [0.692305, 123.163848], [0.692702, 123.163769], [0.692781, 123.163718], [0.692836, 123.163706], [0.692909, 123.163714], [0.692991, 123.163779], [0.693281, 123.163354], [0.692282, 123.163238], [0.692281, 123.163321], [0.692278, 123.163316]], "bibit": {"total": 40, "durian": 24, "alpukat": 16, "mangga": 0, "rambutan": 0, "pala": 0, "tanggal": null, "bulan": null}, "source": "trk"}, {"id_individu": "ID000028", "id_lahan": "L0026", "nama": "Idrak Ishak", "gender": "L", "desa": "DS001", "luas_ha": 0.4466, "unconfirmed": false, "centroid": [0.6880612486279712, 123.160383720185], "coordinates": [[0.687675, 123.160023], [0.687843, 123.160038], [0.687926, 123.160054], [0.688056, 123.160097], [0.688215, 123.160198], [0.688529, 123.160544], [0.688383, 123.160657], [0.688144, 123.160825], [0.687815, 123.160397], [0.687579, 123.160131], [0.687654, 123.160022], [0.687695, 123.160025], [0.687675, 123.160023]], "bibit": null, "source": "trk"}, {"id_individu": "ID000042", "id_lahan": "L0051", "nama": "Irsan P Deto", "gender": "L", "desa": "DS001", "luas_ha": 0.3884, "unconfirmed": false, "centroid": [0.6910868963920961, 123.16131878792118], "coordinates": [[0.691396, 123.161596], [0.690978, 123.161702], [0.690745, 123.161037], [0.691237, 123.160964], [0.691407, 123.161599], [0.691396, 123.161596]], "bibit": {"total": 40, "durian": 24, "alpukat": 16, "mangga": 0, "rambutan": 0, "pala": 0, "tanggal": "2026-06-08", "bulan": "Juni 2026"}, "source": "trk"}, {"id_individu": "ID000060", "id_lahan": "L0039", "nama": "Ishak Y. Rauf", "gender": "L", "desa": "DS001", "luas_ha": 0.3901, "unconfirmed": false, "centroid": [0.6963707683151511, 123.17617564146393], "coordinates": [[0.696214, 123.175738], [0.696403, 123.175802], [0.696488, 123.175896], [0.696573, 123.176062], [0.696622, 123.176142], [0.696727, 123.176345], [0.696728, 123.176408], [0.696702, 123.176444], [0.69613, 123.176476], [0.696054, 123.176177], [0.696177, 123.176078], [0.696184, 123.175822], [0.69622, 123.175739], [0.696214, 123.175738]], "bibit": {"total": 40, "durian": 24, "alpukat": 16, "mangga": 0, "rambutan": 0, "pala": 0, "tanggal": null, "bulan": null}, "source": "trk"}, {"id_individu": "ID000158", "id_lahan": "L0027", "nama": "Liyan Yohan", "gender": "P", "desa": "DS001", "luas_ha": 0.5644, "unconfirmed": false, "centroid": [0.6980387425508062, 123.17447210332163], "coordinates": [[0.698138, 123.174083], [0.697545, 123.174256], [0.697492, 123.174274], [0.697966, 123.174868], [0.698574, 123.174671], [0.698141, 123.17409], [0.698138, 123.174083]], "bibit": null, "source": "trk"}, {"id_individu": "ID000008", "id_lahan": "L0002", "nama": "Maimuna Djaini", "gender": "P", "desa": "DS001", "luas_ha": 0.45, "unconfirmed": false, "centroid": [0.691621712884944, 123.16317043495924], "coordinates": [[0.691283, 123.162936], [0.691528, 123.162865], [0.691878, 123.162956], [0.691923, 123.162969], [0.69197, 123.162985], [0.691984, 123.163318], [0.692003, 123.163481], [0.691206, 123.163343], [0.691285, 123.162937], [0.691283, 123.162936]], "bibit": {"total": 40, "durian": 24, "alpukat": 16, "mangga": 0, "rambutan": 0, "pala": 0, "tanggal": "2026-06-08", "bulan": "Juni 2026"}, "source": "trk"}, {"id_individu": "ID000003", "id_lahan": "L0004", "nama": "Rahman K Supu", "gender": "L", "desa": "DS001", "luas_ha": 1.3183, "unconfirmed": false, "centroid": [0.6907853773435154, 123.1573272580815], "coordinates": [[0.690357, 123.156568], [0.69022, 123.157079], [0.690391, 123.157557], [0.690585, 123.157857], [0.690723, 123.157985], [0.691155, 123.157952], [0.69148, 123.157349], [0.690375, 123.156487], [0.69035, 123.156582], [0.690357, 123.156568]], "bibit": {"total": 43, "durian": 29, "alpukat": 14, "mangga": 0, "rambutan": 0, "pala": 0, "tanggal": "2026-06-08", "bulan": "Juni 2026"}, "source": "trk"}, {"id_individu": "ID000037", "id_lahan": "L0003", "nama": "Rostin Saridin", "gender": "P", "desa": "DS001", "luas_ha": 0.6123, "unconfirmed": false, "centroid": [0.694261136402017, 123.17826054602693], "coordinates": [[0.694074, 123.17779], [0.694692, 123.1781], [0.694573, 123.178529], [0.694522, 123.178719], [0.693822, 123.178456], [0.69404, 123.177766], [0.694074, 123.17779]], "bibit": null, "source": "trk"}, {"id_individu": "ID000009", "id_lahan": "L0038", "nama": "Sahara Abas", "gender": "P", "desa": "DS001", "luas_ha": 0.6907, "unconfirmed": false, "centroid": [0.694193866803257, 123.16326698645678], "coordinates": [[0.693852, 123.163412], [0.693975, 123.16382], [0.694545, 123.163483], [0.694656, 123.163415], [0.694389, 123.162731], [0.69376, 123.16307], [0.69388, 123.163503], [0.693852, 123.163412]], "bibit": null, "source": "trk"}, {"id_individu": "ID000014", "id_lahan": "L0037", "nama": "Salma Ulu", "gender": "P", "desa": "DS001", "luas_ha": 0.0994, "unconfirmed": false, "centroid": [0.6937695093249224, 123.15579070968508], "coordinates": [[0.693851, 123.155977], [0.693625, 123.155919], [0.693666, 123.155598], [0.693931, 123.155683], [0.693857, 123.15598], [0.693851, 123.155977]], "bibit": null, "source": "trk"}, {"id_individu": "ID000010", "id_lahan": "L0010", "nama": "Sira Kasim", "gender": "P", "desa": "DS001", "luas_ha": 0.8645, "unconfirmed": false, "centroid": [0.6874232122550035, 123.161696619961], "coordinates": [[0.686849, 123.161777], [0.687421, 123.162289], [0.68803, 123.161617], [0.687375, 123.161112], [0.686834, 123.16178], [0.686849, 123.161777]], "bibit": null, "source": "trk"}, {"id_individu": "ID000007", "id_lahan": "L0040", "nama": "Tahir Usman", "gender": "L", "desa": "DS001", "luas_ha": 1.9905, "unconfirmed": false, "centroid": [0.6952399392654476, 123.16820373996164], "coordinates": [[0.69435, 123.168193], [0.694857, 123.168658], [0.695089, 123.168829], [0.695224, 123.168885], [0.695482, 123.16896], [0.695628, 123.168956], [0.695717, 123.168958], [0.695881, 123.168656], [0.696032, 123.168387], [0.695685, 123.167811], [0.695583, 123.16762], [0.69506, 123.167329], [0.694343, 123.168198], [0.69435, 123.168193]], "bibit": null, "source": "trk"}, {"id_individu": "ID000062", "id_lahan": "L0059", "nama": "Usman Abas", "gender": "L", "desa": "DS001", "luas_ha": 0.5919, "unconfirmed": false, "centroid": [0.6954313493631437, 123.15617822234448], "coordinates": [[0.694969, 123.156603], [0.695265, 123.156746], [0.695886, 123.155946], [0.695667, 123.155505], [0.694897, 123.156591], [0.695009, 123.156627], [0.694969, 123.156603]], "bibit": null, "source": "trk"}, {"id_individu": "ID000011", "id_lahan": "L0005", "nama": "Habiba Ahmad", "gender": "P", "desa": "DS001", "luas_ha": 0.2033, "unconfirmed": false, "centroid": [0.6883104776910222, 123.16293332908661], "coordinates": [[0.68856, 123.162994], [0.688334, 123.163146], [0.687952, 123.162974], [0.688047, 123.162814], [0.68835, 123.162789], [0.688477, 123.162785], [0.688552, 123.162786], [0.688601, 123.162796], [0.688671, 123.162821], [0.688556, 123.162997], [0.68856, 123.162994]], "bibit": null, "source": "trk"}, {"id_individu": "ID000007", "id_lahan": "L0067", "nama": "Tahir Usman", "gender": "L", "desa": "DS001", "luas_ha": 0.3164, "unconfirmed": false, "centroid": [0.6959935725706891, 123.1702198914679], "coordinates": [[0.696266, 123.169915], [0.696051, 123.169948], [0.695645, 123.170093], [0.695918, 123.170597], [0.696142, 123.170487], [0.696177, 123.170275], [0.696259, 123.170238], [0.696268, 123.169916], [0.696266, 123.169915]], "bibit": null, "source": "trk"}, {"id_individu": "ID000065", "id_lahan": "L0013", "nama": "Mahmud Y Ulu", "gender": "L", "desa": "DS001", "luas_ha": 0.4599, "unconfirmed": false, "centroid": [0.6895602664666601, 123.15955829956624], "coordinates": [[0.689213, 123.159167], [0.689347, 123.159562], [0.689427, 123.159826], [0.689466, 123.159995], [0.689742, 123.159987], [0.689903, 123.159969], [0.689799, 123.159622], [0.689701, 123.159285], [0.689616, 123.159111], [0.68921, 123.159152], [0.689213, 123.159168], [0.689213, 123.159167]], "bibit": null, "source": "trk"}, {"id_individu": "ID000071", "id_lahan": "L0058", "nama": "Alis Mooduto", "gender": "L", "desa": "DS001", "luas_ha": 0.2654, "unconfirmed": false, "centroid": [0.69719953385652, 123.1771870247217], "coordinates": [[0.6969, 123.177466], [0.696813, 123.177187], [0.697489, 123.176911], [0.697598, 123.177178], [0.696902, 123.177467], [0.6969, 123.177466]], "bibit": {"total": 40, "durian": 24, "alpukat": 16, "mangga": 0, "rambutan": 0, "pala": 0, "tanggal": "2026-05-20", "bulan": "Mei 2026"}, "source": "trk"}, {"id_individu": "ID000002", "id_lahan": "L0071", "nama": "Kasman Usman", "gender": "L", "desa": "DS001", "luas_ha": 0.2145, "unconfirmed": false, "centroid": [0.6951475647016379, 123.17072463974633], "coordinates": [[0.695087, 123.17052], [0.695258, 123.170448], [0.695419, 123.170915], [0.695092, 123.170953], [0.694819, 123.170664], [0.695099, 123.170518], [0.695087, 123.17052]], "bibit": {"total": 40, "durian": 24, "alpukat": 16, "mangga": 0, "rambutan": 0, "pala": 0, "tanggal": "2026-05-22", "bulan": "Mei 2026"}, "source": "trk"}, {"id_individu": "ID000015", "id_lahan": "L0001", "nama": "Siti Saridin", "gender": "P", "desa": "DS001", "luas_ha": 0.6205, "unconfirmed": false, "centroid": [0.6922530891929677, 123.15863772836728], "coordinates": [[0.691667, 123.158525], [0.692101, 123.158224], [0.692535, 123.158443], [0.69279, 123.158568], [0.692399, 123.159143], [0.691669, 123.158515], [0.691667, 123.158525]], "bibit": {"total": 40, "durian": 24, "alpukat": 16, "mangga": 0, "rambutan": 0, "pala": 0, "tanggal": "2026-06-08", "bulan": "Juni 2026"}, "source": "trk"}, {"id_individu": "ID000013", "id_lahan": "L0036", "nama": "Hadija Maino", "gender": "P", "desa": "DS001", "luas_ha": 0.5264, "unconfirmed": false, "centroid": [0.6881162661537982, 123.1582164788168], "coordinates": [[0.688006, 123.158761], [0.688533, 123.15827], [0.688196, 123.157754], [0.687747, 123.157973], [0.688002, 123.15878], [0.688006, 123.158761]], "bibit": {"total": 40, "durian": 24, "alpukat": 16, "mangga": 0, "rambutan": 0, "pala": 0, "tanggal": "2026-06-08", "bulan": "Juni 2026"}, "source": "trk"}, {"id_individu": "ID000172", "id_lahan": "L0073", "nama": "Irwan Yohan", "gender": "L", "desa": "DS001", "luas_ha": 0.7675, "unconfirmed": false, "centroid": [0.6926539573535664, 123.17895623036266], "coordinates": [[0.692982263104011, 123.178461752214], [0.69319779545299, 123.179086251604], [0.692725020004726, 123.179275927326], [0.692360972721824, 123.179487462995], [0.69211561158499, 123.178799227133], [0.692982831654465, 123.178472170628], [0.692982263104011, 123.178461752214]], "bibit": {"total": 20, "durian": 10, "alpukat": 10, "mangga": 0, "rambutan": 0, "pala": 0, "tanggal": null, "bulan": null}, "source": "lap2"}, {"id_individu": "ID000163", "id_lahan": "L0074", "nama": "Marni Saban", "gender": "P", "desa": "DS001", "luas_ha": 0.2053, "unconfirmed": false, "centroid": [0.6956629794336743, 123.17788664842806], "coordinates": [[0.695874409682654, 123.177760614831], [0.695990133722138, 123.177921579714], [0.695722500168381, 123.178113608468], [0.6953396711468, 123.177914827765], [0.69538249537305, 123.177804715413], [0.69554371930445, 123.177685510644], [0.695888704853237, 123.177765629893], [0.695874409682654, 123.177760614831]], "bibit": {"total": 30, "durian": 20, "alpukat": 10, "mangga": 0, "rambutan": 0, "pala": 0, "tanggal": null, "bulan": null}, "source": "lap2"}, {"id_individu": "ID000041", "id_lahan": "L0048", "nama": "Rukmin L. Toi", "gender": "P", "desa": "DS001", "luas_ha": 0.5872, "unconfirmed": false, "centroid": [0.6936427685789932, 123.17140499434213], "coordinates": [[0.694095290370072, 123.171080760281], [0.693853187449907, 123.171076954106], [0.693575487932861, 123.171150513934], [0.693150397040654, 123.171237090899], [0.693266028450086, 123.171754160107], [0.69406918984366, 123.171610979719], [0.694080211449494, 123.171081063048], [0.694095290370072, 123.171080760281]], "bibit": {"total": 30, "durian": 20, "alpukat": 10, "mangga": 0, "rambutan": 0, "pala": 0, "tanggal": null, "bulan": null}, "source": "lap2"}, {"id_individu": "ID000360", "id_lahan": "L0075", "nama": "Yusup K Baharu", "gender": "L", "desa": "DS002", "luas_ha": 0.2952, "unconfirmed": false, "centroid": [0.6576781982522494, 123.18048233075244], "coordinates": [[0.657667784566589, 123.180821810104], [0.657338799379663, 123.180541398], [0.657458557795326, 123.180390446163], [0.65755215864994, 123.180299686093], [0.657664876403261, 123.180162142991], [0.657995841352439, 123.180277173767], [0.657721064550732, 123.180869788678], [0.657651881858211, 123.180807345307], [0.657667784566589, 123.180821810104]], "bibit": {"total": 33, "durian": 10, "alpukat": 10, "mangga": 4, "rambutan": 4, "pala": 5, "tanggal": "2026-05-25", "bulan": "Mei 2026"}, "source": "lap3"}, {"id_individu": "ID000084", "id_lahan": null, "nama": "Ariyati Adam", "gender": "P", "desa": "DS002", "luas_ha": 1.2893, "unconfirmed": true, "centroid": [0.6546525022173119, 123.18312117262282], "coordinates": [[0.654731824652055, 123.183878156613], [0.654424964523133, 123.183500668344], [0.654361807236987, 123.1833418344], [0.653925134684424, 123.183111701815], [0.654166720413753, 123.182622309139], [0.655221592208194, 123.182553837073], [0.655224309497443, 123.182669022539], [0.655170371683943, 123.182750963922], [0.655106971088561, 123.182842639166], [0.654892284355561, 123.182916209889], [0.654878560038121, 123.182965431239], [0.655299848009674, 123.183460908515], [0.654747410538442, 123.183895584808], [0.654708659171729, 123.183847691579], [0.654708659171729, 123.183847691579], [0.654731824652055, 123.183878156613]], "bibit": {"total": 33, "durian": 10, "alpukat": 10, "mangga": 4, "rambutan": 4, "pala": 5, "tanggal": "2026-05-29", "bulan": "Mei 2026"}, "source": "lap3"}], "markers_untracked": [{"id_individu": "ID000063", "nama": "Rahim S. Toi", "lat": 0.6922231, "lon": 123.165747, "desa": "DS001", "bibit": {"total": 30, "durian": 20, "alpukat": 10, "mangga": 0, "rambutan": 0, "pala": 0, "tanggal": "2026-05-18", "bulan": "Mei 2026"}}, {"id_individu": "ID000069", "nama": "Abdulah Abdali", "lat": 0.7005383, "lon": 123.17341, "desa": "DS001", "bibit": {"total": 45, "durian": 29, "alpukat": 16, "mangga": 0, "rambutan": 0, "pala": 0, "tanggal": "2026-05-19", "bulan": "Mei 2026"}}, {"id_individu": "ID000075", "nama": "Erni Ibrahim", "lat": 0.6969817, "lon": 123.1711767, "desa": "DS001", "bibit": {"total": 40, "durian": 24, "alpukat": 16, "mangga": 0, "rambutan": 0, "pala": 0, "tanggal": "2026-05-21", "bulan": "Mei 2026"}}, {"id_individu": "ID000057", "nama": "Fatma Tahir", "lat": 0.691765, "lon": 123.1707033, "desa": "DS001", "bibit": {"total": 30, "durian": 20, "alpukat": 10, "mangga": 0, "rambutan": 0, "pala": 0, "tanggal": "2026-05-21", "bulan": "Mei 2026"}}, {"id_individu": "ID000064", "nama": "Ahmad Taga", "lat": 0.6976017, "lon": 123.174385, "desa": "DS001", "bibit": {"total": 40, "durian": 24, "alpukat": 16, "mangga": 0, "rambutan": 0, "pala": 0, "tanggal": "2026-05-22", "bulan": "Mei 2026"}}, {"id_individu": "ID000021", "nama": "Ahmad Podungge", "lat": 0.6931283, "lon": 123.1751033, "desa": "DS001", "bibit": {"total": 20, "durian": 15, "alpukat": 5, "mangga": 0, "rambutan": 0, "pala": 0, "tanggal": "2026-05-22", "bulan": "Mei 2026"}}, {"id_individu": "ID000067", "nama": "Junifer Araeng", "lat": 0.6929187, "lon": 123.1587963, "desa": "DS001", "bibit": {"total": 40, "durian": 24, "alpukat": 16, "mangga": 0, "rambutan": 0, "pala": 0, "tanggal": "2026-06-08", "bulan": "Juni 2026"}}, {"id_individu": "ID000346", "nama": "Ismail Lahabu", "lat": 0.6567868, "lon": 123.1810029, "desa": "DS002", "bibit": {"total": 33, "durian": 10, "alpukat": 10, "mangga": 4, "rambutan": 4, "pala": 5, "tanggal": "2026-05-23", "bulan": "Mei 2026"}}, {"id_individu": "ID000348", "nama": "Aripin Tamalati", "lat": 0.6547643, "lon": 123.1814575, "desa": "DS002", "bibit": {"total": 33, "durian": 10, "alpukat": 10, "mangga": 4, "rambutan": 4, "pala": 5, "tanggal": "2026-05-29", "bulan": "Mei 2026"}}, {"id_individu": "ID000124", "nama": "Elis Hulatali", "lat": 0.6548205, "lon": 123.1809443, "desa": "DS002", "bibit": {"total": 33, "durian": 10, "alpukat": 10, "mangga": 4, "rambutan": 4, "pala": 5, "tanggal": "2026-05-23", "bulan": "Mei 2026"}}], "list_untracked_no_gps": [{"id_individu": "ID000004", "nama": "Danial Yunus", "desa": "DS001", "total_bibit": 30, "bibit": {"durian": 20, "alpukat": 10, "mangga": 0, "rambutan": 0, "pala": 0}, "tanggal": null, "bulan": null}, {"id_individu": "ID000019", "nama": "Yusuf L. Toi", "desa": "DS001", "total_bibit": 20, "bibit": {"durian": 10, "alpukat": 10, "mangga": 0, "rambutan": 0, "pala": 0}, "tanggal": null, "bulan": null}, {"id_individu": "ID000059", "nama": "Amina Mooduto", "desa": "DS001", "total_bibit": 40, "bibit": {"durian": 24, "alpukat": 16, "mangga": 0, "rambutan": 0, "pala": 0}, "tanggal": null, "bulan": null}, {"id_individu": "ID000089", "nama": "Ijen Tahir", "desa": "DS002", "total_bibit": 33, "bibit": {"durian": 10, "alpukat": 10, "mangga": 4, "rambutan": 4, "pala": 5}, "tanggal": "2026-06-01", "bulan": "Juni 2026"}, {"id_individu": "ID000102", "nama": "Hapsa Karim", "desa": "DS002", "total_bibit": 25, "bibit": {"durian": 8, "alpukat": 8, "mangga": 2, "rambutan": 3, "pala": 4}, "tanggal": "2026-06-05", "bulan": "Juni 2026"}, {"id_individu": "ID000107", "nama": "Hajira Isa", "desa": "DS002", "total_bibit": 25, "bibit": {"durian": 8, "alpukat": 8, "mangga": 2, "rambutan": 3, "pala": 4}, "tanggal": "2026-06-01", "bulan": "Juni 2026"}, {"id_individu": "ID000110", "nama": "Sipa Hulatali", "desa": "DS002", "total_bibit": 33, "bibit": {"durian": 10, "alpukat": 10, "mangga": 4, "rambutan": 4, "pala": 5}, "tanggal": "2026-06-01", "bulan": "Juni 2026"}, {"id_individu": "ID000114", "nama": "Pipin Ibrahim", "desa": "DS002", "total_bibit": 33, "bibit": {"durian": 10, "alpukat": 10, "mangga": 4, "rambutan": 4, "pala": 5}, "tanggal": "2026-06-01", "bulan": "Juni 2026"}, {"id_individu": "ID000148", "nama": "Nini Japar", "desa": "DS002", "total_bibit": 33, "bibit": {"durian": 10, "alpukat": 10, "mangga": 4, "rambutan": 4, "pala": 5}, "tanggal": "2026-06-01", "bulan": "Juni 2026"}, {"id_individu": "ID000218", "nama": "Malik Podungge", "desa": "DS001", "total_bibit": 30, "bibit": {"durian": 20, "alpukat": 10, "mangga": 0, "rambutan": 0, "pala": 0}, "tanggal": null, "bulan": null}, {"id_individu": "ID000254", "nama": "Yuni Lahabu", "desa": "DS002", "total_bibit": 33, "bibit": {"durian": 10, "alpukat": 10, "mangga": 4, "rambutan": 4, "pala": 5}, "tanggal": "2026-06-01", "bulan": "Juni 2026"}, {"id_individu": "ID000280", "nama": "Abas Adam", "desa": "DS002", "total_bibit": 33, "bibit": {"durian": 10, "alpukat": 10, "mangga": 4, "rambutan": 4, "pala": 5}, "tanggal": "2026-05-29", "bulan": "Mei 2026"}, {"id_individu": "ID000338", "nama": "Rian Abdulah", "desa": "DS002", "total_bibit": 25, "bibit": {"durian": 8, "alpukat": 8, "mangga": 2, "rambutan": 3, "pala": 4}, "tanggal": "2026-05-29", "bulan": "Mei 2026"}, {"id_individu": "ID000353", "nama": "Faldi Ibrahim", "desa": "DS002", "total_bibit": 33, "bibit": {"durian": 10, "alpukat": 10, "mangga": 4, "rambutan": 4, "pala": 5}, "tanggal": "2026-05-23", "bulan": "Mei 2026"}, {"id_individu": "ID000359", "nama": "Eri Adam", "desa": "DS002", "total_bibit": 33, "bibit": {"durian": 10, "alpukat": 10, "mangga": 4, "rambutan": 4, "pala": 5}, "tanggal": "2026-05-23", "bulan": "Mei 2026"}, {"id_individu": "ID000381", "nama": "Mias Amir", "desa": "DS002", "total_bibit": 25, "bibit": {"durian": 8, "alpukat": 8, "mangga": 2, "rambutan": 3, "pala": 4}, "tanggal": "2026-05-24", "bulan": "Mei 2026"}, {"id_individu": "ID000383", "nama": "Amir Ntungo", "desa": "DS002", "total_bibit": 33, "bibit": {"durian": 10, "alpukat": 10, "mangga": 4, "rambutan": 4, "pala": 5}, "tanggal": "2026-05-29", "bulan": "Mei 2026"}], "summary": {"total_luas_aktif_ha": 17.919914, "target_ha": 25, "desa001_ha": 17.624683, "desa002_ha": 0.295231, "total_ba_recipients": 45, "tracked": 15, "belum_tracking_dgn_gps": 10, "belum_tracking_tanpa_gps": 19, "unconfirmed": 1, "total_polygon_features": 31, "total_individu_tracked": 29, "bibit_totals": {"durian": 736, "alpukat": 521, "mangga": 64, "rambutan": 68, "pala": 86, "total": 1475}}, "recipients": [{"id_individu": "ID000001", "nama": "Abd Rahman Usman", "desa": "DS001", "status": "Tracked", "total": 40, "durian": 24, "alpukat": 16, "mangga": 0, "rambutan": 0, "pala": 0, "tanggal": "2026-06-05", "bulan": "Juni 2026", "loc": [0.6901958012816175, 123.16330590263222], "luas_ha": 0.35, "n_plot": 1}, {"id_individu": "ID000002", "nama": "Kasman Usman", "desa": "DS001", "status": "Tracked", "total": 40, "durian": 24, "alpukat": 16, "mangga": 0, "rambutan": 0, "pala": 0, "tanggal": "2026-05-22", "bulan": "Mei 2026", "loc": [0.6951475647016379, 123.17072463974633], "luas_ha": 0.2145, "n_plot": 1}, {"id_individu": "ID000003", "nama": "Rahman K Supu", "desa": "DS001", "status": "Tracked", "total": 43, "durian": 29, "alpukat": 14, "mangga": 0, "rambutan": 0, "pala": 0, "tanggal": "2026-06-08", "bulan": "Juni 2026", "loc": [0.6907853773435154, 123.1573272580815], "luas_ha": 1.3183, "n_plot": 1}, {"id_individu": "ID000004", "nama": "Danial Yunus", "desa": "DS001", "status": "Belum Di-Tracking", "total": 30, "durian": 20, "alpukat": 10, "mangga": 0, "rambutan": 0, "pala": 0, "tanggal": null, "bulan": null, "loc": null, "luas_ha": null, "n_plot": 0}, {"id_individu": "ID000008", "nama": "Maimuna Djaini", "desa": "DS001", "status": "Tracked", "total": 40, "durian": 24, "alpukat": 16, "mangga": 0, "rambutan": 0, "pala": 0, "tanggal": "2026-06-08", "bulan": "Juni 2026", "loc": [0.691621712884944, 123.16317043495924], "luas_ha": 0.45, "n_plot": 1}, {"id_individu": "ID000013", "nama": "Hadija Maino", "desa": "DS001", "status": "Tracked", "total": 40, "durian": 24, "alpukat": 16, "mangga": 0, "rambutan": 0, "pala": 0, "tanggal": "2026-06-08", "bulan": "Juni 2026", "loc": [0.6887444929821098, 123.15952117253917], "luas_ha": 0.5552, "n_plot": 2}, {"id_individu": "ID000015", "nama": "Siti Saridin", "desa": "DS001", "status": "Tracked", "total": 40, "durian": 24, "alpukat": 16, "mangga": 0, "rambutan": 0, "pala": 0, "tanggal": "2026-06-08", "bulan": "Juni 2026", "loc": [0.6922530891929677, 123.15863772836728], "luas_ha": 0.6205, "n_plot": 1}, {"id_individu": "ID000019", "nama": "Yusuf L. Toi", "desa": "DS001", "status": "Belum Di-Tracking", "total": 20, "durian": 10, "alpukat": 10, "mangga": 0, "rambutan": 0, "pala": 0, "tanggal": null, "bulan": null, "loc": null, "luas_ha": null, "n_plot": 0}, {"id_individu": "ID000021", "nama": "Ahmad Podungge", "desa": "DS001", "status": "Belum Di-Tracking", "total": 20, "durian": 15, "alpukat": 5, "mangga": 0, "rambutan": 0, "pala": 0, "tanggal": "2026-05-22", "bulan": "Mei 2026", "loc": [0.6931283, 123.1751033], "luas_ha": null, "n_plot": 0}, {"id_individu": "ID000041", "nama": "Rukmin L. Toi", "desa": "DS001", "status": "Tracked", "total": 30, "durian": 20, "alpukat": 10, "mangga": 0, "rambutan": 0, "pala": 0, "tanggal": null, "bulan": null, "loc": [0.6936427685789932, 123.17140499434213], "luas_ha": 0.5872, "n_plot": 1}, {"id_individu": "ID000042", "nama": "Irsan P Deto", "desa": "DS001", "status": "Tracked", "total": 40, "durian": 24, "alpukat": 16, "mangga": 0, "rambutan": 0, "pala": 0, "tanggal": "2026-06-08", "bulan": "Juni 2026", "loc": [0.6910868963920961, 123.16131878792118], "luas_ha": 0.3884, "n_plot": 1}, {"id_individu": "ID000057", "nama": "Fatma Tahir", "desa": "DS001", "status": "Belum Di-Tracking", "total": 30, "durian": 20, "alpukat": 10, "mangga": 0, "rambutan": 0, "pala": 0, "tanggal": "2026-05-21", "bulan": "Mei 2026", "loc": [0.691765, 123.1707033], "luas_ha": null, "n_plot": 0}, {"id_individu": "ID000059", "nama": "Amina Mooduto", "desa": "DS001", "status": "Belum Di-Tracking", "total": 40, "durian": 24, "alpukat": 16, "mangga": 0, "rambutan": 0, "pala": 0, "tanggal": null, "bulan": null, "loc": null, "luas_ha": null, "n_plot": 0}, {"id_individu": "ID000060", "nama": "Ishak Y. Rauf", "desa": "DS001", "status": "Tracked", "total": 40, "durian": 24, "alpukat": 16, "mangga": 0, "rambutan": 0, "pala": 0, "tanggal": null, "bulan": null, "loc": [0.6963707683151511, 123.17617564146393], "luas_ha": 0.3901, "n_plot": 1}, {"id_individu": "ID000063", "nama": "Rahim S. Toi", "desa": "DS001", "status": "Belum Di-Tracking", "total": 30, "durian": 20, "alpukat": 10, "mangga": 0, "rambutan": 0, "pala": 0, "tanggal": "2026-05-18", "bulan": "Mei 2026", "loc": [0.6922231, 123.165747], "luas_ha": null, "n_plot": 0}, {"id_individu": "ID000064", "nama": "Ahmad Taga", "desa": "DS001", "status": "Belum Di-Tracking", "total": 40, "durian": 24, "alpukat": 16, "mangga": 0, "rambutan": 0, "pala": 0, "tanggal": "2026-05-22", "bulan": "Mei 2026", "loc": [0.6976017, 123.174385], "luas_ha": null, "n_plot": 0}, {"id_individu": "ID000066", "nama": "Aripin Abdulah", "desa": "DS001", "status": "Tracked", "total": 40, "durian": 24, "alpukat": 16, "mangga": 0, "rambutan": 0, "pala": 0, "tanggal": null, "bulan": null, "loc": [0.693240733082817, 123.15463957883813], "luas_ha": 0.5636, "n_plot": 1}, {"id_individu": "ID000067", "nama": "Junifer Araeng", "desa": "DS001", "status": "Belum Di-Tracking", "total": 40, "durian": 24, "alpukat": 16, "mangga": 0, "rambutan": 0, "pala": 0, "tanggal": "2026-06-08", "bulan": "Juni 2026", "loc": [0.6929187, 123.1587963], "luas_ha": null, "n_plot": 0}, {"id_individu": "ID000069", "nama": "Abdulah Abdali", "desa": "DS001", "status": "Belum Di-Tracking", "total": 45, "durian": 29, "alpukat": 16, "mangga": 0, "rambutan": 0, "pala": 0, "tanggal": "2026-05-19", "bulan": "Mei 2026", "loc": [0.7005383, 123.17341], "luas_ha": null, "n_plot": 0}, {"id_individu": "ID000071", "nama": "Alis Mooduto", "desa": "DS001", "status": "Tracked", "total": 40, "durian": 24, "alpukat": 16, "mangga": 0, "rambutan": 0, "pala": 0, "tanggal": "2026-05-20", "bulan": "Mei 2026", "loc": [0.69719953385652, 123.1771870247217], "luas_ha": 0.2654, "n_plot": 1}, {"id_individu": "ID000075", "nama": "Erni Ibrahim", "desa": "DS001", "status": "Belum Di-Tracking", "total": 40, "durian": 24, "alpukat": 16, "mangga": 0, "rambutan": 0, "pala": 0, "tanggal": "2026-05-21", "bulan": "Mei 2026", "loc": [0.6969817, 123.1711767], "luas_ha": null, "n_plot": 0}, {"id_individu": "ID000084", "nama": "Ariyati Adam", "desa": "DS002", "status": "Unconfirmed", "total": 33, "durian": 10, "alpukat": 10, "mangga": 4, "rambutan": 4, "pala": 5, "tanggal": "2026-05-29", "bulan": "Mei 2026", "loc": [0.6546525022173119, 123.18312117262282], "luas_ha": 1.2893, "n_plot": 1}, {"id_individu": "ID000089", "nama": "Ijen Tahir", "desa": "DS002", "status": "Belum Di-Tracking", "total": 33, "durian": 10, "alpukat": 10, "mangga": 4, "rambutan": 4, "pala": 5, "tanggal": "2026-06-01", "bulan": "Juni 2026", "loc": null, "luas_ha": null, "n_plot": 0}, {"id_individu": "ID000102", "nama": "Hapsa Karim", "desa": "DS002", "status": "Belum Di-Tracking", "total": 25, "durian": 8, "alpukat": 8, "mangga": 2, "rambutan": 3, "pala": 4, "tanggal": "2026-06-05", "bulan": "Juni 2026", "loc": null, "luas_ha": null, "n_plot": 0}, {"id_individu": "ID000107", "nama": "Hajira Isa", "desa": "DS002", "status": "Belum Di-Tracking", "total": 25, "durian": 8, "alpukat": 8, "mangga": 2, "rambutan": 3, "pala": 4, "tanggal": "2026-06-01", "bulan": "Juni 2026", "loc": null, "luas_ha": null, "n_plot": 0}, {"id_individu": "ID000110", "nama": "Sipa Hulatali", "desa": "DS002", "status": "Belum Di-Tracking", "total": 33, "durian": 10, "alpukat": 10, "mangga": 4, "rambutan": 4, "pala": 5, "tanggal": "2026-06-01", "bulan": "Juni 2026", "loc": null, "luas_ha": null, "n_plot": 0}, {"id_individu": "ID000114", "nama": "Pipin Ibrahim", "desa": "DS002", "status": "Belum Di-Tracking", "total": 33, "durian": 10, "alpukat": 10, "mangga": 4, "rambutan": 4, "pala": 5, "tanggal": "2026-06-01", "bulan": "Juni 2026", "loc": null, "luas_ha": null, "n_plot": 0}, {"id_individu": "ID000124", "nama": "Elis Hulatali", "desa": "DS002", "status": "Belum Di-Tracking", "total": 33, "durian": 10, "alpukat": 10, "mangga": 4, "rambutan": 4, "pala": 5, "tanggal": "2026-05-23", "bulan": "Mei 2026", "loc": [0.6548205, 123.1809443], "luas_ha": null, "n_plot": 0}, {"id_individu": "ID000148", "nama": "Nini Japar", "desa": "DS002", "status": "Belum Di-Tracking", "total": 33, "durian": 10, "alpukat": 10, "mangga": 4, "rambutan": 4, "pala": 5, "tanggal": "2026-06-01", "bulan": "Juni 2026", "loc": null, "luas_ha": null, "n_plot": 0}, {"id_individu": "ID000163", "nama": "Marni Saban", "desa": "DS001", "status": "Tracked", "total": 30, "durian": 20, "alpukat": 10, "mangga": 0, "rambutan": 0, "pala": 0, "tanggal": null, "bulan": null, "loc": [0.6956629794336743, 123.17788664842806], "luas_ha": 0.2053, "n_plot": 1}, {"id_individu": "ID000172", "nama": "Irwan Yohan", "desa": "DS001", "status": "Tracked", "total": 20, "durian": 10, "alpukat": 10, "mangga": 0, "rambutan": 0, "pala": 0, "tanggal": null, "bulan": null, "loc": [0.6926539573535664, 123.17895623036266], "luas_ha": 0.7675, "n_plot": 1}, {"id_individu": "ID000173", "nama": "Husain Lamalani", "desa": "DS001", "status": "Tracked", "total": 40, "durian": 24, "alpukat": 16, "mangga": 0, "rambutan": 0, "pala": 0, "tanggal": null, "bulan": null, "loc": [0.6926900381758053, 123.16352050489402], "luas_ha": 0.5104, "n_plot": 1}, {"id_individu": "ID000218", "nama": "Malik Podungge", "desa": "DS001", "status": "Belum Di-Tracking", "total": 30, "durian": 20, "alpukat": 10, "mangga": 0, "rambutan": 0, "pala": 0, "tanggal": null, "bulan": null, "loc": null, "luas_ha": null, "n_plot": 0}, {"id_individu": "ID000254", "nama": "Yuni Lahabu", "desa": "DS002", "status": "Belum Di-Tracking", "total": 33, "durian": 10, "alpukat": 10, "mangga": 4, "rambutan": 4, "pala": 5, "tanggal": "2026-06-01", "bulan": "Juni 2026", "loc": null, "luas_ha": null, "n_plot": 0}, {"id_individu": "ID000280", "nama": "Abas Adam", "desa": "DS002", "status": "Belum Di-Tracking", "total": 33, "durian": 10, "alpukat": 10, "mangga": 4, "rambutan": 4, "pala": 5, "tanggal": "2026-05-29", "bulan": "Mei 2026", "loc": null, "luas_ha": null, "n_plot": 0}, {"id_individu": "ID000338", "nama": "Rian Abdulah", "desa": "DS002", "status": "Belum Di-Tracking", "total": 25, "durian": 8, "alpukat": 8, "mangga": 2, "rambutan": 3, "pala": 4, "tanggal": "2026-05-29", "bulan": "Mei 2026", "loc": null, "luas_ha": null, "n_plot": 0}, {"id_individu": "ID000346", "nama": "Ismail Lahabu", "desa": "DS002", "status": "Belum Di-Tracking", "total": 33, "durian": 10, "alpukat": 10, "mangga": 4, "rambutan": 4, "pala": 5, "tanggal": "2026-05-23", "bulan": "Mei 2026", "loc": [0.6567868, 123.1810029], "luas_ha": null, "n_plot": 0}, {"id_individu": "ID000348", "nama": "Aripin Tamalati", "desa": "DS002", "status": "Belum Di-Tracking", "total": 33, "durian": 10, "alpukat": 10, "mangga": 4, "rambutan": 4, "pala": 5, "tanggal": "2026-05-29", "bulan": "Mei 2026", "loc": [0.6547643, 123.1814575], "luas_ha": null, "n_plot": 0}, {"id_individu": "ID000353", "nama": "Faldi Ibrahim", "desa": "DS002", "status": "Belum Di-Tracking", "total": 33, "durian": 10, "alpukat": 10, "mangga": 4, "rambutan": 4, "pala": 5, "tanggal": "2026-05-23", "bulan": "Mei 2026", "loc": null, "luas_ha": null, "n_plot": 0}, {"id_individu": "ID000359", "nama": "Eri Adam", "desa": "DS002", "status": "Belum Di-Tracking", "total": 33, "durian": 10, "alpukat": 10, "mangga": 4, "rambutan": 4, "pala": 5, "tanggal": "2026-05-23", "bulan": "Mei 2026", "loc": null, "luas_ha": null, "n_plot": 0}, {"id_individu": "ID000360", "nama": "Yusup K Baharu", "desa": "DS002", "status": "Tracked", "total": 33, "durian": 10, "alpukat": 10, "mangga": 4, "rambutan": 4, "pala": 5, "tanggal": "2026-05-25", "bulan": "Mei 2026", "loc": [0.6576781982522494, 123.18048233075244], "luas_ha": 0.2952, "n_plot": 1}, {"id_individu": "ID000381", "nama": "Mias Amir", "desa": "DS002", "status": "Belum Di-Tracking", "total": 25, "durian": 8, "alpukat": 8, "mangga": 2, "rambutan": 3, "pala": 4, "tanggal": "2026-05-24", "bulan": "Mei 2026", "loc": null, "luas_ha": null, "n_plot": 0}, {"id_individu": "ID000383", "nama": "Amir Ntungo", "desa": "DS002", "status": "Belum Di-Tracking", "total": 33, "durian": 10, "alpukat": 10, "mangga": 4, "rambutan": 4, "pala": 5, "tanggal": "2026-05-29", "bulan": "Mei 2026", "loc": null, "luas_ha": null, "n_plot": 0}, {"id_individu": "ID000034", "nama": "Arman Usman", "desa": "DS001", "status": "Tracked-NoBibit", "total": 0, "durian": 0, "alpukat": 0, "mangga": 0, "rambutan": 0, "pala": 0, "tanggal": null, "bulan": null, "loc": [0.6973079507709203, 123.17917249808322], "luas_ha": 0.2427, "n_plot": 1}, {"id_individu": "ID000043", "nama": "Dandi Salim", "desa": "DS001", "status": "Tracked-NoBibit", "total": 0, "durian": 0, "alpukat": 0, "mangga": 0, "rambutan": 0, "pala": 0, "tanggal": null, "bulan": null, "loc": [0.6891712600855543, 123.16436058748653], "luas_ha": 0.4266, "n_plot": 1}, {"id_individu": "ID000038", "nama": "Hadija Daud", "desa": "DS001", "status": "Tracked-NoBibit", "total": 0, "durian": 0, "alpukat": 0, "mangga": 0, "rambutan": 0, "pala": 0, "tanggal": null, "bulan": null, "loc": [0.6987736964500165, 123.17839609643438], "luas_ha": 1.9886, "n_plot": 1}, {"id_individu": "ID000039", "nama": "Herlina Zubair", "desa": "DS001", "status": "Tracked-NoBibit", "total": 0, "durian": 0, "alpukat": 0, "mangga": 0, "rambutan": 0, "pala": 0, "tanggal": null, "bulan": null, "loc": [0.6966366086099988, 123.17858404261594], "luas_ha": 0.7433, "n_plot": 1}, {"id_individu": "ID000028", "nama": "Idrak Ishak", "desa": "DS001", "status": "Tracked-NoBibit", "total": 0, "durian": 0, "alpukat": 0, "mangga": 0, "rambutan": 0, "pala": 0, "tanggal": null, "bulan": null, "loc": [0.6880612486279712, 123.160383720185], "luas_ha": 0.4466, "n_plot": 1}, {"id_individu": "ID000158", "nama": "Liyan Yohan", "desa": "DS001", "status": "Tracked-NoBibit", "total": 0, "durian": 0, "alpukat": 0, "mangga": 0, "rambutan": 0, "pala": 0, "tanggal": null, "bulan": null, "loc": [0.6980387425508062, 123.17447210332163], "luas_ha": 0.5644, "n_plot": 1}, {"id_individu": "ID000037", "nama": "Rostin Saridin", "desa": "DS001", "status": "Tracked-NoBibit", "total": 0, "durian": 0, "alpukat": 0, "mangga": 0, "rambutan": 0, "pala": 0, "tanggal": null, "bulan": null, "loc": [0.694261136402017, 123.17826054602693], "luas_ha": 0.6123, "n_plot": 1}, {"id_individu": "ID000009", "nama": "Sahara Abas", "desa": "DS001", "status": "Tracked-NoBibit", "total": 0, "durian": 0, "alpukat": 0, "mangga": 0, "rambutan": 0, "pala": 0, "tanggal": null, "bulan": null, "loc": [0.694193866803257, 123.16326698645678], "luas_ha": 0.6907, "n_plot": 1}, {"id_individu": "ID000014", "nama": "Salma Ulu", "desa": "DS001", "status": "Tracked-NoBibit", "total": 0, "durian": 0, "alpukat": 0, "mangga": 0, "rambutan": 0, "pala": 0, "tanggal": null, "bulan": null, "loc": [0.6937695093249224, 123.15579070968508], "luas_ha": 0.0994, "n_plot": 1}, {"id_individu": "ID000010", "nama": "Sira Kasim", "desa": "DS001", "status": "Tracked-NoBibit", "total": 0, "durian": 0, "alpukat": 0, "mangga": 0, "rambutan": 0, "pala": 0, "tanggal": null, "bulan": null, "loc": [0.6874232122550035, 123.161696619961], "luas_ha": 0.8645, "n_plot": 1}, {"id_individu": "ID000007", "nama": "Tahir Usman", "desa": "DS001", "status": "Tracked-NoBibit", "total": 0, "durian": 0, "alpukat": 0, "mangga": 0, "rambutan": 0, "pala": 0, "tanggal": null, "bulan": null, "loc": [0.6956167559180684, 123.16921181571476], "luas_ha": 2.3069, "n_plot": 2}, {"id_individu": "ID000062", "nama": "Usman Abas", "desa": "DS001", "status": "Tracked-NoBibit", "total": 0, "durian": 0, "alpukat": 0, "mangga": 0, "rambutan": 0, "pala": 0, "tanggal": null, "bulan": null, "loc": [0.6954313493631437, 123.15617822234448], "luas_ha": 0.5919, "n_plot": 1}, {"id_individu": "ID000011", "nama": "Habiba Ahmad", "desa": "DS001", "status": "Tracked-NoBibit", "total": 0, "durian": 0, "alpukat": 0, "mangga": 0, "rambutan": 0, "pala": 0, "tanggal": null, "bulan": null, "loc": [0.6883104776910222, 123.16293332908661], "luas_ha": 0.2033, "n_plot": 1}, {"id_individu": "ID000065", "nama": "Mahmud Y Ulu", "desa": "DS001", "status": "Tracked-NoBibit", "total": 0, "durian": 0, "alpukat": 0, "mangga": 0, "rambutan": 0, "pala": 0, "tanggal": null, "bulan": null, "loc": [0.6895602664666601, 123.15955829956624], "luas_ha": 0.4599, "n_plot": 1}, {"id_individu": "ID000401", "nama": "Rasid Laleno", "desa": "DS001", "status": "Belum Di-Tracking", "total": 20, "durian": 10, "alpukat": 10, "mangga": 0, "rambutan": 0, "pala": 0, "tanggal": null, "bulan": null, "loc": null, "luas_ha": null, "n_plot": 0}, {"id_individu": "ID000400", "nama": "Farid Musa", "desa": "DS001", "status": "Belum Di-Tracking", "total": 5, "durian": 5, "alpukat": 0, "mangga": 0, "rambutan": 0, "pala": 0, "tanggal": null, "bulan": null, "loc": null, "luas_ha": null, "n_plot": 0}]};
+// ============================================================
+// DATA SOURCES
+// ============================================================
+// 1) Geometri poligon lahan — file terpisah (polygons.json), HARUS berada
+//    di folder yang sama dengan index.html. Diupdate oleh tim MEL saat ada tracking GPS baru
+//    (proses KML -> JSON dilakukan oleh Claude; Anda hanya perlu replace file ini di GitHub).
+const POLYGONS_FILE = "polygons.json";
+
+// 2) Snapshot data bibit (fallback jika Google Sheet tidak bisa diakses)
+const FALLBACK_BIBIT = [{"id_individu": "ID000001", "nama": "Abd Rahman Usman", "desa": "DS001", "durian": 24, "alpukat": 16, "mangga": 0, "rambutan": 0, "pala": 0, "tanggal": "2026-06-05", "lat": null, "lon": null}, {"id_individu": "ID000002", "nama": "Kasman Usman", "desa": "DS001", "durian": 24, "alpukat": 16, "mangga": 0, "rambutan": 0, "pala": 0, "tanggal": "2026-05-22", "lat": null, "lon": null}, {"id_individu": "ID000003", "nama": "Rahman K Supu", "desa": "DS001", "durian": 29, "alpukat": 14, "mangga": 0, "rambutan": 0, "pala": 0, "tanggal": "2026-06-08", "lat": null, "lon": null}, {"id_individu": "ID000004", "nama": "Danial Yunus", "desa": "DS001", "durian": 20, "alpukat": 10, "mangga": 0, "rambutan": 0, "pala": 0, "tanggal": null, "lat": null, "lon": null}, {"id_individu": "ID000008", "nama": "Maimuna Djaini", "desa": "DS001", "durian": 24, "alpukat": 16, "mangga": 0, "rambutan": 0, "pala": 0, "tanggal": "2026-06-08", "lat": null, "lon": null}, {"id_individu": "ID000013", "nama": "Hadija Maino", "desa": "DS001", "durian": 24, "alpukat": 16, "mangga": 0, "rambutan": 0, "pala": 0, "tanggal": "2026-06-08", "lat": null, "lon": null}, {"id_individu": "ID000015", "nama": "Siti Saridin", "desa": "DS001", "durian": 24, "alpukat": 16, "mangga": 0, "rambutan": 0, "pala": 0, "tanggal": "2026-06-08", "lat": null, "lon": null}, {"id_individu": "ID000019", "nama": "Yusuf L. Toi", "desa": "DS001", "durian": 10, "alpukat": 10, "mangga": 0, "rambutan": 0, "pala": 0, "tanggal": null, "lat": null, "lon": null}, {"id_individu": "ID000021", "nama": "Ahmad Podungge", "desa": "DS001", "durian": 15, "alpukat": 5, "mangga": 0, "rambutan": 0, "pala": 0, "tanggal": "2026-05-22", "lat": 0.6931283, "lon": 123.1751033}, {"id_individu": "ID000041", "nama": "Rukmin L. Toi", "desa": "DS001", "durian": 20, "alpukat": 10, "mangga": 0, "rambutan": 0, "pala": 0, "tanggal": null, "lat": null, "lon": null}, {"id_individu": "ID000042", "nama": "Irsan P Deto", "desa": "DS001", "durian": 24, "alpukat": 16, "mangga": 0, "rambutan": 0, "pala": 0, "tanggal": "2026-06-08", "lat": null, "lon": null}, {"id_individu": "ID000057", "nama": "Fatma Tahir", "desa": "DS001", "durian": 20, "alpukat": 10, "mangga": 0, "rambutan": 0, "pala": 0, "tanggal": "2026-05-21", "lat": 0.691765, "lon": 123.1707033}, {"id_individu": "ID000059", "nama": "Amina Mooduto", "desa": "DS001", "durian": 24, "alpukat": 16, "mangga": 0, "rambutan": 0, "pala": 0, "tanggal": null, "lat": null, "lon": null}, {"id_individu": "ID000060", "nama": "Ishak Y. Rauf", "desa": "DS001", "durian": 24, "alpukat": 16, "mangga": 0, "rambutan": 0, "pala": 0, "tanggal": null, "lat": null, "lon": null}, {"id_individu": "ID000063", "nama": "Rahim S. Toi", "desa": "DS001", "durian": 20, "alpukat": 10, "mangga": 0, "rambutan": 0, "pala": 0, "tanggal": "2026-05-18", "lat": 0.6922231, "lon": 123.165747}, {"id_individu": "ID000064", "nama": "Ahmad Taga", "desa": "DS001", "durian": 24, "alpukat": 16, "mangga": 0, "rambutan": 0, "pala": 0, "tanggal": "2026-05-22", "lat": 0.6976017, "lon": 123.174385}, {"id_individu": "ID000066", "nama": "Aripin Abdulah", "desa": "DS001", "durian": 24, "alpukat": 16, "mangga": 0, "rambutan": 0, "pala": 0, "tanggal": null, "lat": null, "lon": null}, {"id_individu": "ID000067", "nama": "Junifer Araeng", "desa": "DS001", "durian": 24, "alpukat": 16, "mangga": 0, "rambutan": 0, "pala": 0, "tanggal": "2026-06-08", "lat": 0.6929187, "lon": 123.1587963}, {"id_individu": "ID000069", "nama": "Abdulah Abdali", "desa": "DS001", "durian": 29, "alpukat": 16, "mangga": 0, "rambutan": 0, "pala": 0, "tanggal": "2026-05-19", "lat": 0.7005383, "lon": 123.17341}, {"id_individu": "ID000071", "nama": "Alis Mooduto", "desa": "DS001", "durian": 24, "alpukat": 16, "mangga": 0, "rambutan": 0, "pala": 0, "tanggal": "2026-05-20", "lat": null, "lon": null}, {"id_individu": "ID000075", "nama": "Erni Ibrahim", "desa": "DS001", "durian": 24, "alpukat": 16, "mangga": 0, "rambutan": 0, "pala": 0, "tanggal": "2026-05-21", "lat": 0.6969817, "lon": 123.1711767}, {"id_individu": "ID000084", "nama": "Ariyati Adam", "desa": "DS002", "durian": 10, "alpukat": 10, "mangga": 4, "rambutan": 4, "pala": 5, "tanggal": "2026-05-29", "lat": null, "lon": null}, {"id_individu": "ID000089", "nama": "Ijen Tahir", "desa": "DS002", "durian": 10, "alpukat": 10, "mangga": 4, "rambutan": 4, "pala": 5, "tanggal": "2026-06-01", "lat": null, "lon": null}, {"id_individu": "ID000102", "nama": "Hapsa Karim", "desa": "DS002", "durian": 8, "alpukat": 8, "mangga": 2, "rambutan": 3, "pala": 4, "tanggal": "2026-06-05", "lat": null, "lon": null}, {"id_individu": "ID000107", "nama": "Hajira Isa", "desa": "DS002", "durian": 8, "alpukat": 8, "mangga": 2, "rambutan": 3, "pala": 4, "tanggal": "2026-06-01", "lat": null, "lon": null}, {"id_individu": "ID000110", "nama": "Sipa Hulatali", "desa": "DS002", "durian": 10, "alpukat": 10, "mangga": 4, "rambutan": 4, "pala": 5, "tanggal": "2026-06-01", "lat": null, "lon": null}, {"id_individu": "ID000114", "nama": "Pipin Ibrahim", "desa": "DS002", "durian": 10, "alpukat": 10, "mangga": 4, "rambutan": 4, "pala": 5, "tanggal": "2026-06-01", "lat": null, "lon": null}, {"id_individu": "ID000124", "nama": "Elis Hulatali", "desa": "DS002", "durian": 10, "alpukat": 10, "mangga": 4, "rambutan": 4, "pala": 5, "tanggal": "2026-05-23", "lat": 0.6548205, "lon": 123.1809443}, {"id_individu": "ID000148", "nama": "Nini Japar", "desa": "DS002", "durian": 10, "alpukat": 10, "mangga": 4, "rambutan": 4, "pala": 5, "tanggal": "2026-06-01", "lat": null, "lon": null}, {"id_individu": "ID000163", "nama": "Marni Saban", "desa": "DS001", "durian": 20, "alpukat": 10, "mangga": 0, "rambutan": 0, "pala": 0, "tanggal": null, "lat": null, "lon": null}, {"id_individu": "ID000172", "nama": "Irwan Yohan", "desa": "DS001", "durian": 10, "alpukat": 10, "mangga": 0, "rambutan": 0, "pala": 0, "tanggal": null, "lat": null, "lon": null}, {"id_individu": "ID000173", "nama": "Husain Lamalani", "desa": "DS001", "durian": 24, "alpukat": 16, "mangga": 0, "rambutan": 0, "pala": 0, "tanggal": null, "lat": null, "lon": null}, {"id_individu": "ID000218", "nama": "Malik Podungge", "desa": "DS001", "durian": 20, "alpukat": 10, "mangga": 0, "rambutan": 0, "pala": 0, "tanggal": null, "lat": null, "lon": null}, {"id_individu": "ID000254", "nama": "Yuni Lahabu", "desa": "DS002", "durian": 10, "alpukat": 10, "mangga": 4, "rambutan": 4, "pala": 5, "tanggal": "2026-06-01", "lat": null, "lon": null}, {"id_individu": "ID000280", "nama": "Abas Adam", "desa": "DS002", "durian": 10, "alpukat": 10, "mangga": 4, "rambutan": 4, "pala": 5, "tanggal": "2026-05-29", "lat": null, "lon": null}, {"id_individu": "ID000338", "nama": "Rian Abdulah", "desa": "DS002", "durian": 8, "alpukat": 8, "mangga": 2, "rambutan": 3, "pala": 4, "tanggal": "2026-05-29", "lat": null, "lon": null}, {"id_individu": "ID000346", "nama": "Ismail Lahabu", "desa": "DS002", "durian": 10, "alpukat": 10, "mangga": 4, "rambutan": 4, "pala": 5, "tanggal": "2026-05-23", "lat": 0.6567868, "lon": 123.1810029}, {"id_individu": "ID000348", "nama": "Aripin Tamalati", "desa": "DS002", "durian": 10, "alpukat": 10, "mangga": 4, "rambutan": 4, "pala": 5, "tanggal": "2026-05-29", "lat": 0.6547643, "lon": 123.1814575}, {"id_individu": "ID000353", "nama": "Faldi Ibrahim", "desa": "DS002", "durian": 10, "alpukat": 10, "mangga": 4, "rambutan": 4, "pala": 5, "tanggal": "2026-05-23", "lat": null, "lon": null}, {"id_individu": "ID000359", "nama": "Eri Adam", "desa": "DS002", "durian": 10, "alpukat": 10, "mangga": 4, "rambutan": 4, "pala": 5, "tanggal": "2026-05-23", "lat": null, "lon": null}, {"id_individu": "ID000360", "nama": "Yusup K Baharu", "desa": "DS002", "durian": 10, "alpukat": 10, "mangga": 4, "rambutan": 4, "pala": 5, "tanggal": "2026-05-25", "lat": null, "lon": null}, {"id_individu": "ID000381", "nama": "Mias Amir", "desa": "DS002", "durian": 8, "alpukat": 8, "mangga": 2, "rambutan": 3, "pala": 4, "tanggal": "2026-05-24", "lat": null, "lon": null}, {"id_individu": "ID000383", "nama": "Amir Ntungo", "desa": "DS002", "durian": 10, "alpukat": 10, "mangga": 4, "rambutan": 4, "pala": 5, "tanggal": "2026-05-29", "lat": null, "lon": null}, {"id_individu": "ID000401", "nama": "Rasid Laleno", "desa": "DS001", "durian": 10, "alpukat": 10, "mangga": 0, "rambutan": 0, "pala": 0, "tanggal": null, "lat": null, "lon": null}, {"id_individu": "ID000400", "nama": "Farid Musa", "desa": "DS001", "durian": 5, "alpukat": 0, "mangga": 0, "rambutan": 0, "pala": 0, "tanggal": null, "lat": null, "lon": null}];
+
+// 3) URL Google Sheet (published-to-web sebagai CSV). Kosongkan ("") untuk pakai FALLBACK_BIBIT saja.
+//    Cara dapat URL: di Google Sheets -> File -> Share -> Publish to web -> pilih sheet -> format CSV -> Publish -> copy link
+const SHEET_CSV_URL = "";
+
+// ============================================================
+// HELPERS
+// ============================================================
+const fmtHa = v => v.toLocaleString('id-ID', {minimumFractionDigits:4, maximumFractionDigits:4});
+const fmtTgl = iso => iso ? new Date(iso+'T00:00:00').toLocaleDateString('id-ID', {day:'numeric', month:'long', year:'numeric'}) : null;
+const JENIS_ICON = {durian:'🌳 Durian', alpukat:'🥑 Alpukat', mangga:'🥭 Mangga', rambutan:'🍒 Rambutan', pala:'🌰 Pala'};
+const BIBIT_ICON = {durian:'🌳', alpukat:'🥑', mangga:'🥭', rambutan:'🍒', pala:'🌰'};
+const STATUS_INFO = {
+  'Tracked': ['status-tracked', '✅ Lahan & Bibit'],
+  'Tracked-NoBibit': ['status-nobibit', '🌳 Lahan (Bibit -)'],
+  'Unconfirmed': ['status-unconfirmed', '⚠️ Lahan Tentatif'],
+  'Belum Di-Tracking': ['status-belum', '❌ Belum Tracking'],
+};
+
+function bibitTable(b){
+  if(!b || b.total === 0) return '<div class="warn-box">⚠️ Belum ada data Berita Acara untuk individu ini</div>';
+  let rows='';
+  Object.keys(JENIS_ICON).forEach(k=>{ if(b[k]>0) rows += `<tr><td>${JENIS_ICON[k]}</td><td>${b[k]} btg</td></tr>`; });
+  if(b.tanggal) rows += `<tr><td>📅 Tgl Distribusi</td><td>${fmtTgl(b.tanggal)}</td></tr>`;
+  return `<div class="bibit-title">Bibit diterima (Berita Acara) — Total ${b.total} batang</div>
+          <table>${rows}</table>`;
+}
+
+function deriveBulan(tanggal){
+  if(!tanggal) return null;
+  if(tanggal.startsWith('2026-05')) return 'Mei 2026';
+  if(tanggal.startsWith('2026-06')) return 'Juni 2026';
+  return null;
+}
+
+// Normalisasi 1 baris data bibit, baik dari CSV (string) maupun FALLBACK (sudah typed)
+function normalizeBibitRow(row){
+  const num = v => { const n = parseFloat(v); return isNaN(n) ? 0 : n; };
+  const id = (row.id_individu ?? '').toString().trim();
+  if(!id) return null;
+  const latRaw = row.lat, lonRaw = row.lon;
+  return {
+    id_individu: id,
+    nama: (row.nama ?? '').toString().trim(),
+    desa: (row.desa ?? '').toString().trim(),
+    durian: num(row.durian), alpukat: num(row.alpukat), mangga: num(row.mangga),
+    rambutan: num(row.rambutan), pala: num(row.pala),
+    tanggal: (row.tanggal ?? '').toString().trim() || null,
+    lat: (latRaw !== '' && latRaw != null && !isNaN(parseFloat(latRaw))) ? parseFloat(latRaw) : null,
+    lon: (lonRaw !== '' && lonRaw != null && !isNaN(parseFloat(lonRaw))) ? parseFloat(lonRaw) : null,
+  };
+}
+
+// ============================================================
+// GABUNGKAN GEOMETRI (statis) + DATA BIBIT (dinamis dari Sheet)
+// ============================================================
+function buildRecipientsAndPolygons(polygonsRaw, bibitRows){
+  const bibitMap = new Map();
+  bibitRows.forEach(r => bibitMap.set(r.id_individu, r));
+
+  const polyByIndiv = new Map();
+  polygonsRaw.forEach(p => {
+    if(!polyByIndiv.has(p.id_individu)) polyByIndiv.set(p.id_individu, []);
+    polyByIndiv.get(p.id_individu).push(p);
+  });
+
+  const recipients = [];
+  const handled = new Set();
+
+  const bibitFields = (b) => b
+    ? {durian:b.durian, alpukat:b.alpukat, mangga:b.mangga, rambutan:b.rambutan, pala:b.pala,
+       total: b.durian+b.alpukat+b.mangga+b.rambutan+b.pala, tanggal:b.tanggal, bulan: deriveBulan(b.tanggal)}
+    : {durian:0, alpukat:0, mangga:0, rambutan:0, pala:0, total:0, tanggal:null, bulan:null};
+
+  // 1) Individu yang punya poligon lahan
+  polyByIndiv.forEach((plist, idv) => {
+    const b = bibitMap.get(idv);
+    const unconfirmed = plist.some(p => p.unconfirmed);
+    const activePlots = plist.filter(p => !p.unconfirmed);
+    let status;
+    if(unconfirmed) status = 'Unconfirmed';
+    else if(b) status = 'Tracked';
+    else status = 'Tracked-NoBibit';
+
+    let luas_ha = null, n_plot = 0;
+    if(unconfirmed){
+      const up = plist.find(p => p.unconfirmed);
+      luas_ha = up.luas_ha; n_plot = 1;
+    } else if(activePlots.length){
+      luas_ha = activePlots.reduce((s,p) => s+p.luas_ha, 0);
+      n_plot = activePlots.length;
+    }
+    const loc = [
+      plist.reduce((s,p) => s+p.centroid[0], 0) / plist.length,
+      plist.reduce((s,p) => s+p.centroid[1], 0) / plist.length,
+    ];
+
+    recipients.push({
+      id_individu: idv, nama: plist[0].nama, desa: plist[0].desa, status,
+      ...bibitFields(b), loc, luas_ha, n_plot,
+    });
+    handled.add(idv);
+  });
+
+  // 2) Individu dgn data bibit tapi TANPA poligon lahan -> Belum Di-Tracking
+  bibitRows.forEach(b => {
+    if(handled.has(b.id_individu)) return;
+    recipients.push({
+      id_individu: b.id_individu, nama: b.nama, desa: b.desa, status: 'Belum Di-Tracking',
+      ...bibitFields(b),
+      loc: (b.lat != null && b.lon != null) ? [b.lat, b.lon] : null,
+      luas_ha: null, n_plot: 0,
+    });
+  });
+
+  // Lampirkan info bibit ke setiap poligon (utk popup peta)
+  const polygons = polygonsRaw.map(p => ({...p, bibit: bibitMap.has(p.id_individu) ? bibitFields(bibitMap.get(p.id_individu)) : null}));
+
+  return {recipients, polygons};
+}
+
+function computeSummary(recipients, polygons){
+  const active = polygons.filter(p => !p.unconfirmed);
+  const sumLuas = arr => arr.reduce((s,p) => s+p.luas_ha, 0);
+  const ba = recipients.filter(r => r.status !== 'Tracked-NoBibit');
+  const bt = {durian:0, alpukat:0, mangga:0, rambutan:0, pala:0, total:0};
+  ba.forEach(r => Object.keys(bt).forEach(k => bt[k] += r[k]));
+  const belum = ba.filter(r => r.status === 'Belum Di-Tracking');
+
+  return {
+    total_luas_aktif_ha: sumLuas(active), target_ha: 25,
+    desa001_ha: sumLuas(active.filter(p => p.desa === 'DS001')),
+    desa002_ha: sumLuas(active.filter(p => p.desa === 'DS002')),
+    total_ba_recipients: ba.length,
+    tracked: ba.filter(r => r.status === 'Tracked').length,
+    belum_tracking_dgn_gps: belum.filter(r => r.loc).length,
+    belum_tracking_tanpa_gps: belum.filter(r => !r.loc).length,
+    unconfirmed: ba.filter(r => r.status === 'Unconfirmed').length,
+    total_polygon_features: active.length,
+    total_individu_tracked: new Set(active.map(p => p.id_individu)).size,
+    bibit_totals: bt,
+  };
+}
+
+// ============================================================
+// RENDER (peta, sidebar, filter) — dipanggil setelah data siap
+// ============================================================
+function render(polygons, recipients, summary){
+document.getElementById('loading-banner').style.display = 'none';
 
 // ---------- Map init ----------
 const map = L.map('map', { zoomControl: true }).setView([0.677, 123.169], 13);
@@ -274,19 +437,6 @@ const osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
   attribution: '&copy; OpenStreetMap contributors', maxZoom: 19
 });
 
-const fmtHa = v => v.toLocaleString('id-ID', {minimumFractionDigits:4, maximumFractionDigits:4});
-const fmtTgl = iso => iso ? new Date(iso+'T00:00:00').toLocaleDateString('id-ID', {day:'numeric', month:'long', year:'numeric'}) : null;
-const JENIS_ICON = {durian:'🌳 Durian', alpukat:'🥑 Alpukat', mangga:'🥭 Mangga', rambutan:'🍒 Rambutan', pala:'🌰 Pala'};
-
-function bibitTable(b){
-  if(!b) return '<div class="warn-box">⚠️ Belum ada data Berita Acara untuk individu ini</div>';
-  let rows='';
-  Object.keys(JENIS_ICON).forEach(k=>{ if(b[k]>0) rows += `<tr><td>${JENIS_ICON[k]}</td><td>${b[k]} btg</td></tr>`; });
-  if(b.tanggal) rows += `<tr><td>📅 Tgl Distribusi</td><td>${fmtTgl(b.tanggal)}</td></tr>`;
-  return `<div class="bibit-title">Bibit diterima (Berita Acara) — Total ${b.total} batang</div>
-          <table>${rows}</table>`;
-}
-
 // ---------- Layers ----------
 const trackedLayer = L.featureGroup();
 const unconfirmedLayer = L.featureGroup();
@@ -294,7 +444,7 @@ const markerLayer = L.featureGroup();
 const polyItems = [];   // {layer, group, data}
 const markerItems = []; // {layer, group, data}
 
-DATA.polygons.forEach(p => {
+polygons.forEach(p => {
   const color = p.desa === 'DS001' ? '#3fb950' : '#58a6ff';
   if(p.unconfirmed){
     const poly = L.polygon(p.coordinates, {
@@ -332,22 +482,23 @@ DATA.polygons.forEach(p => {
   polyItems.push({layer: poly, group: trackedLayer, data: p});
 });
 
-DATA.markers_untracked.forEach(m => {
-  const marker = L.circleMarker([m.lat, m.lon], {
+// Marker utk individu "Belum Di-Tracking" yg punya koordinat referensi
+recipients.filter(r => r.status === 'Belum Di-Tracking' && r.loc).forEach(r => {
+  const marker = L.circleMarker(r.loc, {
     radius: 7, color:'#d29922', weight:2, fillColor:'#d29922', fillOpacity:0.7
   });
   marker.bindPopup(`<div class="pp">
-      <h4>${m.nama} <span style="color:#d29922">⚠️</span></h4>
-      <div class="pp-badges"><span class="badge ${m.desa.toLowerCase()}">${m.desa}</span> <span class="badge" style="background:rgba(210,153,34,.15);color:#d29922">BELUM DI-TRACKING</span></div>
+      <h4>${r.nama} <span style="color:#d29922">⚠️</span></h4>
+      <div class="pp-badges"><span class="badge ${r.desa.toLowerCase()}">${r.desa}</span> <span class="badge" style="background:rgba(210,153,34,.15);color:#d29922">BELUM DI-TRACKING</span></div>
       <table>
-        <tr><td>ID Individu</td><td>${m.id_individu}</td></tr>
+        <tr><td>ID Individu</td><td>${r.id_individu}</td></tr>
         <tr><td>Lahan</td><td>Belum ada data luas/GPS poligon</td></tr>
       </table>
       <div class="note" style="margin-top:6px">Koordinat dari titik distribusi bibit (Kobo) — dapat dijadikan titik awal untuk GPS tracking lahan.</div>
-      ${bibitTable(m.bibit)}
+      ${bibitTable(r)}
     </div>`);
   marker.addTo(markerLayer);
-  markerItems.push({layer: marker, group: markerLayer, data: m});
+  markerItems.push({layer: marker, group: markerLayer, data: r});
 });
 
 trackedLayer.addTo(map);
@@ -356,7 +507,9 @@ markerLayer.addTo(map);
 
 // Fit bounds to all features
 const allLayers = L.featureGroup([trackedLayer, unconfirmedLayer, markerLayer]);
-map.fitBounds(allLayers.getBounds(), {padding:[24,24]});
+if(allLayers.getLayers().length){
+  map.fitBounds(allLayers.getBounds(), {padding:[24,24]});
+}
 
 L.control.layers(
   {'Satelit (Esri)': esri, 'OpenStreetMap': osm},
@@ -365,7 +518,7 @@ L.control.layers(
 ).addTo(map);
 
 // ---------- Sidebar stats (total program) ----------
-const s = DATA.summary;
+const s = summary;
 document.getElementById('stat-luas').textContent = fmtHa(s.total_luas_aktif_ha) + ' / ' + s.target_ha;
 document.getElementById('prog-bar').style.width = (s.total_luas_aktif_ha/s.target_ha*100).toFixed(1) + '%';
 document.getElementById('stat-ds001').textContent = fmtHa(s.desa001_ha);
@@ -387,7 +540,7 @@ document.getElementById('sum-lahan-ha').textContent = fmtHa(s.total_luas_aktif_h
 document.getElementById('sum-lahan-jumlah').textContent = s.total_polygon_features;
 document.getElementById('sum-ba-count').textContent = s.total_ba_recipients;
 document.getElementById('note-ba-count').textContent = s.total_ba_recipients;
-document.getElementById('recipient-total-count').textContent = DATA.recipients.length;
+document.getElementById('recipient-total-count').textContent = recipients.length;
 
 // ---------- Filtering ----------
 let filterDesa = 'Semua';
@@ -414,8 +567,8 @@ function matchFilter(desa, bibit){
 
 function applyFilters(){
   let visLuas = 0, visCount = 0;
-  const baMatchedIds = new Set();  // tracked & cocok filter
-  const baTotalIds = new Set();    // semua penerima bibit (unik) yg cocok filter
+  const baMatchedIds = new Set();
+  const baTotalIds = new Set();
 
   polyItems.forEach(it => {
     const ok = matchFilter(it.data.desa, it.data.bibit);
@@ -425,21 +578,18 @@ function applyFilters(){
   });
 
   markerItems.forEach(it => {
-    const ok = matchFilter(it.data.desa, it.data.bibit);
+    const ok = matchFilter(it.data.desa, it.data);
     if(ok && !it.group.hasLayer(it.layer)) it.layer.addTo(it.group);
     if(!ok && it.group.hasLayer(it.layer)) it.group.removeLayer(it.layer);
   });
 
-  // hitung penerima bibit (unik) yg cocok filter — sumber: DATA.recipients (43 BA, exclude 14 "Tracked-NoBibit")
-  DATA.recipients.filter(r => r.status !== 'Tracked-NoBibit').forEach(r => {
-    const bibitObj = {durian:r.durian, alpukat:r.alpukat, mangga:r.mangga, rambutan:r.rambutan, pala:r.pala, bulan:r.bulan, total:r.total};
-    if(matchFilter(r.desa, bibitObj)){
+  recipients.filter(r => r.status !== 'Tracked-NoBibit').forEach(r => {
+    if(matchFilter(r.desa, r)){
       baTotalIds.add(r.id_individu);
       if(r.status === 'Tracked') baMatchedIds.add(r.id_individu);
     }
   });
 
-  // sinkronkan list penerima di sidebar kiri
   renderRecipients();
 
   document.getElementById('filter-luas').textContent = fmtHa(visLuas);
@@ -448,14 +598,6 @@ function applyFilters(){
 }
 
 // ---------- Sidebar kiri: daftar penerima bibit ----------
-const BIBIT_ICON = {durian:'🌳', alpukat:'🥑', mangga:'🥭', rambutan:'🍒', pala:'🌰'};
-const STATUS_INFO = {
-  'Tracked': ['status-tracked', '✅ Lahan & Bibit'],
-  'Tracked-NoBibit': ['status-nobibit', '🌳 Lahan (Bibit -)'],
-  'Unconfirmed': ['status-unconfirmed', '⚠️ Lahan Tentatif'],
-  'Belum Di-Tracking': ['status-belum', '❌ Belum Tracking'],
-};
-
 function focusOnMap(idIndividu, loc){
   document.getElementById('map').scrollIntoView({behavior:'smooth', block:'start'});
   map.flyTo(loc, 17, {duration: 0.6});
@@ -471,10 +613,9 @@ function renderRecipients(){
   listEl.innerHTML = '';
   let shown = 0;
 
-  DATA.recipients
+  recipients
     .filter(r => {
-      const bibitObj = {durian:r.durian, alpukat:r.alpukat, mangga:r.mangga, rambutan:r.rambutan, pala:r.pala, bulan:r.bulan, total:r.total};
-      if(!matchFilter(r.desa, bibitObj)) return false;
+      if(!matchFilter(r.desa, r)) return false;
       if(term && !r.nama.toLowerCase().includes(term)) return false;
       return true;
     })
@@ -514,12 +655,11 @@ function renderRecipients(){
       listEl.appendChild(card);
     });
 
-  document.getElementById('recipient-count-text').textContent = `Menampilkan ${shown} dari ${DATA.recipients.length} petani (${DATA.summary.total_ba_recipients} penerima bibit + 14 lahan tanpa data BA)`;
+  document.getElementById('recipient-count-text').textContent = `Menampilkan ${shown} dari ${recipients.length} petani (${s.total_ba_recipients} penerima bibit + ${recipients.length - s.total_ba_recipients} lahan tanpa data BA)`;
 }
 
 document.getElementById('recipient-search').addEventListener('input', renderRecipients);
 
-// pill handlers — single select (desa, bulan)
 function setupSingleSelect(containerId, onChange){
   document.querySelectorAll(`#${containerId} .pill`).forEach(btn => {
     btn.addEventListener('click', () => {
@@ -533,7 +673,6 @@ function setupSingleSelect(containerId, onChange){
 setupSingleSelect('filter-desa', v => filterDesa = v);
 setupSingleSelect('filter-bulan', v => filterBulan = v);
 
-// pill handlers — multi select (jenis bibit)
 document.querySelectorAll('#filter-jenis .pill').forEach(btn => {
   btn.addEventListener('click', () => {
     btn.classList.toggle('active');
@@ -552,6 +691,49 @@ document.getElementById('btn-reset').addEventListener('click', () => {
 });
 
 applyFilters();
+} // end render()
+
+// ============================================================
+// BOOTSTRAP — ambil geometri lahan (polygons.json) + data bibit (Sheet/fallback)
+// ============================================================
+function startApp(polygonsRaw, rawBibitRows){
+  const bibitRows = rawBibitRows.map(normalizeBibitRow).filter(r => r !== null);
+  const {recipients, polygons} = buildRecipientsAndPolygons(polygonsRaw, bibitRows);
+  const summary = computeSummary(recipients, polygons);
+  render(polygons, recipients, summary);
+}
+
+function fetchPolygons(){
+  return fetch(POLYGONS_FILE).then(r => {
+    if(!r.ok) throw new Error('HTTP ' + r.status);
+    return r.json();
+  });
+}
+
+function fetchBibit(){
+  return new Promise(resolve => {
+    if(SHEET_CSV_URL && SHEET_CSV_URL.indexOf('http') === 0){
+      Papa.parse(SHEET_CSV_URL, {
+        download: true, header: true, skipEmptyLines: true,
+        complete: (res) => resolve(res.data),
+        error: () => {
+          document.getElementById('loading-banner').textContent = '⚠️ Gagal memuat Google Sheet, menampilkan data cadangan (snapshot terakhir).';
+          resolve(FALLBACK_BIBIT);
+        }
+      });
+    } else {
+      resolve(FALLBACK_BIBIT);
+    }
+  });
+}
+
+document.getElementById('loading-banner').textContent = '⏳ Memuat data lahan & bibit...';
+Promise.all([fetchPolygons(), fetchBibit()])
+  .then(([polygonsRaw, bibitRowsRaw]) => startApp(polygonsRaw, bibitRowsRaw))
+  .catch(() => {
+    document.getElementById('loading-banner').textContent =
+      '⚠️ Gagal memuat data lahan (polygons.json). Pastikan file ini diupload ke folder yang sama dengan index.html di GitHub.';
+  });
 
 </script>
 </body>
