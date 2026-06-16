@@ -517,8 +517,9 @@ function buildRecipientsAndPolygons(polygonsRaw,bibitRows){
   const recipients=[];
   const handled=new Set();
   const bibitFields=b=>b?{durian:b.durian,alpukat:b.alpukat,mangga:b.mangga,rambutan:b.rambutan,pala:b.pala,
-    total:b.durian+b.alpukat+b.mangga+b.rambutan+b.pala,tanggal:b.tanggal,bulan:deriveBulan(b.tanggal)}
-    :{durian:0,alpukat:0,mangga:0,rambutan:0,pala:0,total:0,tanggal:null,bulan:null};
+    total:b.durian+b.alpukat+b.mangga+b.rambutan+b.pala,tanggal:b.tanggal,bulan:deriveBulan(b.tanggal),
+    foto_url:b.foto_url||null}
+    :{durian:0,alpukat:0,mangga:0,rambutan:0,pala:0,total:0,tanggal:null,bulan:null,foto_url:null};
 
   polyByIndiv.forEach((plist,idv)=>{
     const b=bibitMap.get(idv);
