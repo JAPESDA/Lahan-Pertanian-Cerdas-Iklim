@@ -466,15 +466,20 @@ function deriveBulan(t){
 function driveToImg(url){
   if(!url||url.trim()==='') return null;
   url = url.trim();
-  // format: drive.google.com/file/d/ID/view atau /open
-  const m1 = url.match(/\/file\/d\/([^\/\?]+)/);
-  if(m1) return `https://lh3.googleusercontent.com/d/${m1[1]}`;
-  // format: id=ID
-  const m2 = url.match(/[?&]id=([^&]+)/);
-  if(m2) return `https://lh3.googleusercontent.com/d/${m2[1]}`;
-  // sudah berupa direct link lh3 atau thumbnail
-  if(url.includes('lh3.google')||url.includes('thumbnail')) return url;
-  return null;
+  // Ekstrak file ID dari berbagai format link Drive
+  const patterns = [
+    /\/file\/d\/([^\/\?&]+)/,   // /file/d/ID/view
+    /[?&]id=([^&]+)/,            // ?id=ID
+    /\/d\/([^\/\?&]+)/,          // /d/ID
+  ];
+  let fileId = null;
+  for(const p of patterns){
+    const m = url.match(p);
+    if(m){ fileId = m[1]; break; }
+  }
+  if(!fileId) return null;
+  // Pakai thumbnail — paling reliable untuk embed publik
+  return `https://drive.google.com/thumbnail?id=${fileId}&sz=w480`;
 }
 
 function normalizeBibitRow(row){
