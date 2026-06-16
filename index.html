@@ -339,9 +339,8 @@
       </div>
 
       <h2>Legenda</h2>
-      <div class="legend-item"><div class="swatch" style="background:var(--ds001);opacity:.55"></div><span>Lahan ter-tracking DS001</span></div>
-      <div class="legend-item"><div class="swatch" style="background:var(--ds002);opacity:.55"></div><span>Lahan ter-tracking DS002</span></div>
-      <div class="legend-item"><div class="swatch" style="background:transparent;border:2px dashed var(--warn)"></div><span>Lahan tentatif (1 plot)</span></div>
+      <div class="legend-item"><div class="swatch" style="background:var(--ds001);opacity:.55"></div><span>Lahan ter-tracking DS001 Ilomata</span></div>
+      <div class="legend-item"><div class="swatch" style="background:var(--ds002);opacity:.55"></div><span>Lahan ter-tracking DS002 Suka Makmur</span></div>
       <div class="legend-item"><div class="swatch" style="background:var(--warn);border-radius:50%"></div><span>Titik GPS — belum ada poligon</span></div>
       <p class="note">Individu yang baru menerima bibit tapi belum ada data lahan sama sekali tetap muncul di daftar kiri dengan badge "📍 no GPS".</p>
     </aside>
@@ -539,7 +538,7 @@ function render(polygons,recipients,summary){
   document.getElementById('recipient-total-count').textContent=recipients.length;
 
   // ── Map ──
-  _map = L.map('map',{zoomControl:true}).setView([0.677,123.169],13);
+  _map = L.map('map',{zoomControl:false}).setView([0.677,123.169],13);
   const esri=L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
     {attribution:'Tiles © Esri',maxZoom:19}).addTo(_map);
   const osm=L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
@@ -622,7 +621,7 @@ function render(polygons,recipients,summary){
 
   L.control.layers(
     {'🛰️ Satelit':esri,'🗺️ OpenStreetMap':osm},
-    {'Lahan ter-tracking':trackedLayer,'Lahan tentatif':unconfLayer,'Titik GPS (belum poligon)':markerLayer},
+    {'Lahan ter-tracking':trackedLayer,'Titik GPS (belum poligon)':markerLayer},
     {collapsed:true}
   ).addTo(_map);
 
