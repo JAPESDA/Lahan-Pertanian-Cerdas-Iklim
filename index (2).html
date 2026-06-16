@@ -1,0 +1,862 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Peta Lahan Agroforestry — PCI JAPESDA</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0d1117;--panel:#161b22;--panel2:#1c2330;--border:#30363d;
+    --text:#e6edf3;--muted:#8b949e;--accent:#3fb950;--accent2:#58a6ff;
+    --warn:#d29922;--danger:#f85149;--ds001:#3fb950;--ds002:#58a6ff;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;height:100%;background:var(--bg);color:var(--text);
+    font-family:'IBM Plex Sans',sans-serif;}
+  .app{display:flex;flex-direction:column;height:100vh;}
+
+  /* ── Header ── */
+  header{padding:10px 18px;border-bottom:1px solid var(--border);background:var(--panel);
+    display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px;}
+  header h1{font-size:15px;margin:0;font-weight:600;letter-spacing:.2px;}
+  header h1 span{color:var(--accent);}
+  header .meta{font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--muted);}
+
+  /* ── Tab Bar ── */
+  .tab-bar{display:flex;align-items:stretch;background:var(--panel);
+    border-bottom:1px solid var(--border);padding:0 18px;gap:0;}
+  .tab-btn{padding:0 20px;height:42px;font-size:12px;font-weight:600;
+    background:transparent;border:none;color:var(--muted);cursor:pointer;
+    border-bottom:2px solid transparent;display:flex;align-items:center;gap:6px;
+    transition:color .15s, border-color .15s;}
+  .tab-btn:hover{color:var(--text);}
+  .tab-btn.active{color:var(--accent2);border-bottom-color:var(--accent2);}
+  .tab-content{display:none;flex:1;align-items:center;gap:0;}
+  .tab-content.active{display:flex;}
+
+  /* ── Tab Progres Lahan ── */
+  .tab-lahan{padding:8px 18px;gap:20px;flex-wrap:wrap;background:var(--panel2);}
+  .lahan-stat{display:flex;align-items:center;gap:10px;}
+  .lahan-stat .ls-icon{font-size:20px;}
+  .lahan-stat .ls-val{font-family:'IBM Plex Mono',monospace;font-size:18px;font-weight:700;color:var(--text);}
+  .lahan-stat .ls-lbl{font-size:10px;color:var(--muted);}
+  .lahan-divider{width:1px;height:36px;background:var(--border);}
+  .progress-wrap{display:flex;flex-direction:column;gap:4px;min-width:180px;}
+  .progress-label{display:flex;justify-content:space-between;font-size:10.5px;}
+  .progress-label span:first-child{color:var(--muted);}
+  .progress-label span:last-child{font-family:'IBM Plex Mono',monospace;font-weight:600;color:var(--accent2);}
+  .progress{height:6px;background:var(--border);border-radius:3px;overflow:hidden;}
+  .progress>div{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));
+    transition:width .4s ease;}
+  .desa-bars{display:flex;gap:12px;}
+  .desa-bar{display:flex;flex-direction:column;gap:3px;}
+  .desa-bar .db-label{font-size:10px;color:var(--muted);}
+  .desa-bar .db-val{font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:600;}
+  .desa-bar.ds1 .db-val{color:var(--ds001);}
+  .desa-bar.ds2 .db-val{color:var(--ds002);}
+
+  /* ── Tab Distribusi Bibit ── */
+  .tab-bibit{padding:8px 18px;gap:6px;flex-wrap:wrap;background:var(--panel2);}
+  .bibit-chip{display:flex;align-items:center;gap:5px;padding:5px 12px;border-radius:20px;
+    background:var(--panel);border:1.5px solid var(--border);cursor:pointer;
+    transition:all .15s;user-select:none;}
+  .bibit-chip:hover{border-color:var(--accent2);transform:translateY(-1px);}
+  .bibit-chip.active-chip{border-color:var(--accent);background:rgba(63,185,80,.12);
+    box-shadow:0 0 0 1px var(--accent);}
+  .bibit-chip .bc-icon{font-size:16px;}
+  .bibit-chip .bc-num{font-family:'IBM Plex Mono',monospace;font-size:15px;font-weight:700;color:var(--text);}
+  .bibit-chip .bc-lbl{font-size:10px;color:var(--muted);}
+  .bibit-total{display:flex;align-items:center;gap:8px;padding:5px 14px;border-radius:20px;
+    background:rgba(63,185,80,.1);border:1.5px solid var(--accent);}
+  .bibit-total .bt-num{font-family:'IBM Plex Mono',monospace;font-size:18px;font-weight:700;color:var(--accent);}
+  .bibit-total .bt-lbl{font-size:10px;color:var(--muted);}
+  .chip-hint{font-size:10px;color:var(--muted);margin-left:auto;padding-right:6px;font-style:italic;}
+
+  /* ── Main layout ── */
+  .main{display:flex;flex:1;min-height:0;}
+  #map{flex:1;background:#0d1117;position:relative;}
+  #loading-banner{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+    z-index:1000;background:rgba(22,27,34,.95);border:1px solid var(--border);border-radius:8px;
+    padding:12px 22px;font-size:13px;color:var(--text);box-shadow:0 4px 16px rgba(0,0,0,.4);
+    max-width:80%;text-align:center;}
+
+  /* ── Sidebar kiri ── */
+  .left-aside{width:280px;flex-shrink:0;background:var(--panel);
+    border-right:1px solid var(--border);display:flex;flex-direction:column;}
+  .left-aside-header{padding:10px 12px;border-bottom:1px solid var(--border);}
+  .left-aside h2{font-size:10.5px;text-transform:uppercase;letter-spacing:.08em;
+    color:var(--muted);margin:0 0 8px;font-weight:600;}
+  .search-box{width:100%;padding:6px 10px;border-radius:6px;border:1px solid var(--border);
+    background:var(--panel2);color:var(--text);font-family:'IBM Plex Sans',sans-serif;
+    font-size:12px;}
+  .search-box::placeholder{color:var(--muted);}
+  .search-box:focus{outline:none;border-color:var(--accent2);}
+  .recipient-count{font-size:10.5px;color:var(--muted);padding:6px 12px;
+    border-bottom:1px solid var(--border);}
+  .recipient-list{flex:1;overflow-y:auto;padding:6px 8px;display:flex;flex-direction:column;gap:4px;}
+  .recipient-card{background:var(--panel2);border:1px solid var(--border);border-radius:6px;
+    padding:7px 9px;cursor:pointer;transition:border-color .12s;}
+  .recipient-card:hover{border-color:var(--accent2);}
+  .recipient-card.highlighted{border-color:var(--accent)!important;
+    box-shadow:0 0 0 1px var(--accent),0 2px 8px rgba(63,185,80,.2);}
+  .recipient-card.dimmed{opacity:.35;}
+  .recipient-card.no-click{cursor:default;}
+  .rc-top{display:flex;justify-content:space-between;align-items:center;gap:6px;}
+  .rc-name{font-size:12px;font-weight:500;color:var(--text);}
+  .rc-bibit{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted);margin-top:3px;}
+
+  /* ── Sidebar kanan ── */
+  aside.right-aside{width:300px;flex-shrink:0;background:var(--panel);
+    border-left:1px solid var(--border);overflow-y:auto;padding:12px;font-size:12.5px;}
+  aside.right-aside h2{font-size:10.5px;text-transform:uppercase;letter-spacing:.08em;
+    color:var(--muted);margin:16px 0 8px;font-weight:600;border-bottom:1px solid var(--border);
+    padding-bottom:5px;}
+  aside.right-aside h2:first-child{margin-top:0;}
+  .stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px;}
+  .stat-card{background:var(--panel2);border:1px solid var(--border);border-radius:6px;padding:9px;}
+  .stat-card .v{font-family:'IBM Plex Mono',monospace;font-size:18px;font-weight:600;color:var(--text);}
+  .stat-card .l{font-size:10px;color:var(--muted);margin-top:2px;line-height:1.3;}
+  .stat-card.full{grid-column:1/-1;}
+
+  /* ── Badge ── */
+  .badge{display:inline-block;font-family:'IBM Plex Mono',monospace;font-size:10px;
+    padding:1px 6px;border-radius:10px;font-weight:600;}
+  .badge.ds001{background:rgba(63,185,80,.15);color:var(--ds001);}
+  .badge.ds002{background:rgba(88,166,255,.15);color:var(--ds002);}
+  .badge.status-tracked{background:rgba(63,185,80,.15);color:var(--accent);}
+  .badge.status-nobibit{background:rgba(88,166,255,.15);color:var(--accent2);}
+  .badge.status-unconfirmed{background:rgba(210,153,34,.15);color:var(--warn);}
+  .badge.status-belum{background:rgba(248,81,73,.12);color:var(--danger);}
+  .badge.nogeo{background:rgba(255,255,255,.06);color:var(--muted);}
+
+  /* ── Filter pills ── */
+  .filter-label{font-size:10px;text-transform:uppercase;letter-spacing:.08em;
+    color:var(--muted);margin-bottom:5px;display:block;margin-top:10px;}
+  .filter-label:first-child{margin-top:0;}
+  .pill-row{display:flex;flex-wrap:wrap;gap:5px;}
+  .pill{font-family:'IBM Plex Mono',monospace;font-size:10px;padding:3px 9px;
+    border-radius:12px;border:1px solid var(--border);background:var(--panel2);
+    color:var(--muted);cursor:pointer;transition:all .12s;user-select:none;}
+  .pill:hover{border-color:var(--accent2);color:var(--text);}
+  .pill.active{background:var(--accent2);color:#0d1117;border-color:var(--accent2);font-weight:600;}
+  .pill.active.jenis{background:var(--accent);border-color:var(--accent);}
+  .btn-reset{margin-top:10px;font-size:11px;padding:5px 10px;border-radius:5px;
+    border:1px solid var(--border);background:transparent;color:var(--accent2);
+    cursor:pointer;width:100%;font-family:'IBM Plex Sans',sans-serif;}
+  .btn-reset:hover{background:var(--panel2);border-color:var(--accent2);}
+
+  /* ── Hasil filter stat ── */
+  .filter-stat{background:var(--panel2);border:1px solid var(--border);border-radius:6px;
+    padding:9px;margin-bottom:7px;}
+  .filter-stat .fs-val{font-family:'IBM Plex Mono',monospace;font-size:20px;font-weight:600;}
+  .filter-stat .fs-lbl{font-size:10px;color:var(--muted);margin-top:1px;}
+
+  /* ── Leaflet overrides ── */
+  .leaflet-popup-content-wrapper{background:var(--panel2)!important;color:var(--text)!important;
+    border:1px solid var(--border)!important;border-radius:8px!important;
+    font-family:'IBM Plex Sans',sans-serif!important;}
+  .leaflet-popup-tip{background:var(--panel2)!important;}
+  .leaflet-popup-content{margin:12px 14px;min-width:200px;}
+  .pp h4{margin:0 0 6px;font-size:13px;color:var(--text);}
+  .pp .pp-badges{margin-bottom:8px;}
+  .pp table{width:100%;border-collapse:collapse;font-size:11.5px;}
+  .pp table td{padding:2px 0;}
+  .pp table td:first-child{color:var(--muted);width:55%;}
+  .pp table td:last-child{font-family:'IBM Plex Mono',monospace;text-align:right;}
+  .pp .bibit-title{margin-top:8px;font-size:10.5px;text-transform:uppercase;
+    letter-spacing:.06em;color:var(--muted);border-top:1px solid var(--border);padding-top:6px;}
+  .pp .warn-box{margin-top:8px;padding:6px 8px;background:rgba(210,153,34,.12);
+    border:1px solid rgba(210,153,34,.35);border-radius:5px;color:var(--warn);font-size:11px;}
+  .leaflet-control-layers{background:var(--panel2)!important;border:1px solid var(--border)!important;
+    color:var(--text)!important;}
+  .leaflet-control-layers label{font-size:11px;}
+  a.leaflet-control-layers-toggle{filter:invert(.9);}
+  .leaflet-control-attribution{background:rgba(13,17,23,.7)!important;color:var(--muted)!important;}
+  .leaflet-control-attribution a{color:var(--accent2)!important;}
+  .plot-tooltip{background:rgba(22,27,34,.9);color:#e6edf3;border:1px solid #30363d;
+    font-size:11px;padding:3px 7px;border-radius:4px;}
+  .legend-item{display:flex;align-items:center;gap:8px;margin-bottom:6px;}
+  .swatch{width:14px;height:14px;border-radius:3px;flex-shrink:0;border:1px solid rgba(255,255,255,.2);}
+  .legend-item span{font-size:11px;color:var(--text);}
+  .note{font-size:11px;color:var(--muted);line-height:1.5;}
+  /* Foto distribusi di popup */
+  .pp-foto{margin-bottom:8px;border-radius:6px;overflow:hidden;border:1px solid var(--border);}
+  .pp-foto img{width:100%;max-height:160px;object-fit:cover;display:block;cursor:zoom-in;
+    transition:opacity .15s;}
+  .pp-foto img:hover{opacity:.85;}
+  /* Status bar bawah */
+  .status-bar{padding:4px 16px;background:var(--panel);border-top:1px solid var(--border);
+    display:flex;align-items:center;gap:12px;font-size:10.5px;color:var(--muted);flex-wrap:wrap;}
+  .status-bar .sb-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;}
+  .status-bar .sb-dot.green{background:var(--accent);}
+  .status-bar .sb-dot.yellow{background:var(--warn);}
+  .status-bar .sb-item{display:flex;align-items:center;gap:5px;}
+  .status-bar .sb-val{color:var(--text);font-family:'IBM Plex Mono',monospace;font-weight:500;}
+
+  /* ── Responsive ── */
+  @media(max-width:900px){
+    .app{height:auto;min-height:100vh;}
+    header{padding:8px 12px;}
+    header h1{font-size:13px;}
+    header .meta{display:none;}
+    .tab-bar{padding:0 10px;}
+    .tab-btn{padding:0 12px;font-size:11px;}
+    .tab-lahan,.tab-bibit{padding:6px 10px;gap:8px;}
+    .main{flex-direction:column;height:auto;}
+    #map{flex:none;width:100%;height:52vh;min-height:300px;order:-1;}
+    .left-aside,.right-aside{width:100%;max-width:none;border:none;
+      border-top:1px solid var(--border);}
+    .left-aside{order:1;max-height:60vh;}
+    .right-aside{order:2;overflow:visible;}
+    .recipient-list{max-height:50vh;}
+  }
+  @media(max-width:480px){
+    .bibit-chip .bc-lbl{display:none;}
+    .desa-bars{gap:8px;}
+    .chip-hint{display:none;}
+    .lahan-stat .ls-lbl{display:none;}
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <h1>🗺️ Peta Lahan <span>Agroforestry</span> — PCI JAPESDA</h1>
+    <div class="meta">Lahan: Tracking GPS (KML + Avenza) · Bibit: Berita Acara · 2026</div>
+  </header>
+
+  <!-- Tab bar -->
+  <div class="tab-bar">
+    <button class="tab-btn active" id="tab-btn-lahan" onclick="switchTab('lahan')">
+      🗺️ Progres Lahan
+    </button>
+    <button class="tab-btn" id="tab-btn-bibit" onclick="switchTab('bibit')">
+      🌱 Distribusi Bibit
+    </button>
+
+    <!-- Tab Progres Lahan -->
+    <div class="tab-content tab-lahan active" id="tab-lahan">
+      <div class="lahan-stat">
+        <div class="ls-icon">📐</div>
+        <div>
+          <div class="ls-val" id="tl-ha">–</div>
+          <div class="ls-lbl">Ha ter-tracking</div>
+        </div>
+      </div>
+      <div class="lahan-divider"></div>
+      <div class="progress-wrap">
+        <div class="progress-label">
+          <span>Target 25 Ha (Ind. 1.2 / 2.1)</span>
+          <span id="tl-pct">–</span>
+        </div>
+        <div class="progress"><div id="tl-bar" style="width:0%"></div></div>
+      </div>
+      <div class="lahan-divider"></div>
+      <div class="desa-bars">
+        <div class="desa-bar ds1">
+          <div class="db-label">DS001 Ilomata</div>
+          <div class="db-val" id="tl-ds1">–</div>
+        </div>
+        <div class="desa-bar ds2">
+          <div class="db-label">DS002 Suka Makmur</div>
+          <div class="db-val" id="tl-ds2">–</div>
+        </div>
+      </div>
+      <div class="lahan-divider"></div>
+      <div class="lahan-stat">
+        <div class="ls-icon">🗺️</div>
+        <div>
+          <div class="ls-val" id="tl-plot">–</div>
+          <div class="ls-lbl">plot GPS</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab Distribusi Bibit -->
+    <div class="tab-content tab-bibit" id="tab-bibit">
+      <div class="bibit-chip" id="chip-durian" onclick="toggleBibitFilter('durian')">
+        <span class="bc-icon">🌳</span><span class="bc-num" id="tb-durian">–</span><span class="bc-lbl">Durian</span>
+      </div>
+      <div class="bibit-chip" id="chip-alpukat" onclick="toggleBibitFilter('alpukat')">
+        <span class="bc-icon">🥑</span><span class="bc-num" id="tb-alpukat">–</span><span class="bc-lbl">Alpukat</span>
+      </div>
+      <div class="bibit-chip" id="chip-mangga" onclick="toggleBibitFilter('mangga')">
+        <span class="bc-icon">🥭</span><span class="bc-num" id="tb-mangga">–</span><span class="bc-lbl">Mangga</span>
+      </div>
+      <div class="bibit-chip" id="chip-rambutan" onclick="toggleBibitFilter('rambutan')">
+        <span class="bc-icon">🍒</span><span class="bc-num" id="tb-rambutan">–</span><span class="bc-lbl">Rambutan</span>
+      </div>
+      <div class="bibit-chip" id="chip-pala" onclick="toggleBibitFilter('pala')">
+        <span class="bc-icon">🌰</span><span class="bc-num" id="tb-pala">–</span><span class="bc-lbl">Pala</span>
+      </div>
+      <div class="bibit-total">
+        <span class="bc-icon">🌱</span>
+        <span class="bt-num" id="tb-total">–</span>
+        <span class="bt-lbl">btg total<br><span id="tb-penerima" style="font-size:10px">– penerima</span></span>
+      </div>
+      <span class="chip-hint">👆 klik jenis untuk filter peta</span>
+    </div>
+  </div>
+
+  <!-- Main -->
+  <div class="main">
+    <aside class="left-aside">
+      <div class="left-aside-header">
+        <h2>👥 Daftar Petani (<span id="recipient-total-count">–</span>)</h2>
+        <input type="text" class="search-box" id="recipient-search" placeholder="Cari nama petani...">
+      </div>
+      <div class="recipient-count" id="recipient-count-text"></div>
+      <div class="recipient-list" id="recipient-list"></div>
+    </aside>
+
+    <div id="map"><div id="loading-banner">⏳ Memuat data lahan & bibit...</div></div>
+
+    <aside class="right-aside">
+      <h2>🔍 Filter Data</h2>
+      <span class="filter-label">Desa</span>
+      <div class="pill-row" id="filter-desa">
+        <div class="pill active" data-val="Semua">Semua</div>
+        <div class="pill" data-val="DS001">DS001 Ilomata</div>
+        <div class="pill" data-val="DS002">DS002 Suka Makmur</div>
+      </div>
+      <span class="filter-label">Bulan Distribusi Bibit</span>
+      <div class="pill-row" id="filter-bulan">
+        <div class="pill active" data-val="Semua">Semua</div>
+        <div class="pill" data-val="Mei 2026">Mei 2026</div>
+        <div class="pill" data-val="Juni 2026">Juni 2026</div>
+        <div class="pill" data-val="Tanpa Data">Tanpa Data BA</div>
+      </div>
+      <span class="filter-label">Jenis Bibit</span>
+      <div class="pill-row" id="filter-jenis">
+        <div class="pill jenis" data-val="durian">🌳 Durian</div>
+        <div class="pill jenis" data-val="alpukat">🥑 Alpukat</div>
+        <div class="pill jenis" data-val="mangga">🥭 Mangga</div>
+        <div class="pill jenis" data-val="rambutan">🍒 Rambutan</div>
+        <div class="pill jenis" data-val="pala">🌰 Pala</div>
+      </div>
+      <button class="btn-reset" id="btn-reset">↺ Reset semua filter</button>
+
+      <h2>Hasil Filter</h2>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px;">
+        <div class="filter-stat">
+          <div class="fs-val" id="filter-luas">–</div>
+          <div class="fs-lbl">Ha (<span id="filter-count">–</span> lahan)</div>
+        </div>
+        <div class="filter-stat">
+          <div class="fs-val" id="filter-ba">–</div>
+          <div class="fs-lbl">penerima bibit cocok filter</div>
+        </div>
+      </div>
+
+      <h2>Legenda</h2>
+      <div class="legend-item"><div class="swatch" style="background:var(--ds001);opacity:.55"></div><span>Lahan ter-tracking DS001 Ilomata</span></div>
+      <div class="legend-item"><div class="swatch" style="background:var(--ds002);opacity:.55"></div><span>Lahan ter-tracking DS002 Suka Makmur</span></div>
+      <div class="legend-item"><div class="swatch" style="background:var(--warn);border-radius:50%"></div><span>Titik GPS — belum ada poligon</span></div>
+      <p class="note">Individu yang baru menerima bibit tapi belum ada data lahan sama sekali tetap muncul di daftar kiri dengan badge "📍 no GPS".</p>
+    </aside>
+  </div>
+
+  <!-- Status bar update data -->
+  <div class="status-bar" id="status-bar">
+    <div class="sb-item"><div class="sb-dot yellow"></div><span>Memuat data...</span></div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<script>
+// ── Tab switch ──
+function switchTab(tab){
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(c=>c.classList.remove('active'));
+  document.getElementById('tab-btn-'+tab).classList.add('active');
+  document.getElementById('tab-'+tab).classList.add('active');
+}
+
+// ── Bibit chip filter (klik = toggle, highlight peta & dim yang lain) ──
+const activeChips = new Set();
+function toggleBibitFilter(jenis){
+  const chip = document.getElementById('chip-'+jenis);
+  if(activeChips.has(jenis)){
+    activeChips.delete(jenis);
+    chip.classList.remove('active-chip');
+  } else {
+    activeChips.add(jenis);
+    chip.classList.add('active-chip');
+  }
+  applyChipHighlight();
+  // Sync dengan pill filter-jenis jika ada
+  syncChipsToJenisPills();
+  applyFilters();
+}
+
+function applyChipHighlight(){
+  if(activeChips.size === 0){
+    polyItems.forEach(it=>{ it.layer.setStyle(it._baseStyle); });
+    markerItems.forEach(it=>{ it.layer.setStyle(it._baseStyle); });
+    return;
+  }
+  polyItems.forEach(it=>{
+    const b = it.data.bibit;
+    const match = b && [...activeChips].some(j=>b[j]>0);
+    if(match){
+      it.layer.setStyle({...it._baseStyle, weight:3, fillOpacity:0.6});
+    } else {
+      it.layer.setStyle({...it._baseStyle, fillOpacity:0.08, opacity:0.3});
+    }
+  });
+  markerItems.forEach(it=>{
+    const b = it.data.bibit || it.data;
+    const match = [...activeChips].some(j=>b[j]>0);
+    it.layer.setStyle(match ? it._baseStyle : {...it._baseStyle, fillOpacity:0.15, opacity:0.3});
+  });
+}
+
+function syncChipsToJenisPills(){
+  document.querySelectorAll('#filter-jenis .pill').forEach(pill=>{
+    const jenis = pill.dataset.val;
+    if(activeChips.has(jenis)) pill.classList.add('active');
+    else pill.classList.remove('active');
+  });
+  filterJenis.clear();
+  activeChips.forEach(j=>filterJenis.add(j));
+}
+
+// ── DATA SOURCES ──
+const POLYGONS_FILE = "polygons.json";
+const FALLBACK_BIBIT = [{"id_individu": "ID000001", "nama": "Abd Rahman Usman", "desa": "DS001", "durian": 24, "alpukat": 16, "mangga": 0, "rambutan": 0, "pala": 0, "tanggal": "2026-06-05", "lat": null, "lon": null}, {"id_individu": "ID000002", "nama": "Kasman Usman", "desa": "DS001", "durian": 24, "alpukat": 16, "mangga": 0, "rambutan": 0, "pala": 0, "tanggal": "2026-05-22", "lat": null, "lon": null}, {"id_individu": "ID000003", "nama": "Rahman K Supu", "desa": "DS001", "durian": 29, "alpukat": 14, "mangga": 0, "rambutan": 0, "pala": 0, "tanggal": "2026-06-08", "lat": null, "lon": null}, {"id_individu": "ID000004", "nama": "Danial Yunus", "desa": "DS001", "durian": 20, "alpukat": 10, "mangga": 0, "rambutan": 0, "pala": 0, "tanggal": null, "lat": null, "lon": null}, {"id_individu": "ID000008", "nama": "Maimuna Djaini", "desa": "DS001", "durian": 24, "alpukat": 16, "mangga": 0, "rambutan": 0, "pala": 0, "tanggal": "2026-06-08", "lat": null, "lon": null}, {"id_individu": "ID000013", "nama": "Hadija Maino", "desa": "DS001", "durian": 24, "alpukat": 16, "mangga": 0, "rambutan": 0, "pala": 0, "tanggal": "2026-06-08", "lat": null, "lon": null}, {"id_individu": "ID000015", "nama": "Siti Saridin", "desa": "DS001", "durian": 24, "alpukat": 16, "mangga": 0, "rambutan": 0, "pala": 0, "tanggal": "2026-06-08", "lat": null, "lon": null}, {"id_individu": "ID000019", "nama": "Yusuf L. Toi", "desa": "DS001", "durian": 10, "alpukat": 10, "mangga": 0, "rambutan": 0, "pala": 0, "tanggal": null, "lat": null, "lon": null}, {"id_individu": "ID000021", "nama": "Ahmad Podungge", "desa": "DS001", "durian": 15, "alpukat": 5, "mangga": 0, "rambutan": 0, "pala": 0, "tanggal": "2026-05-22", "lat": 0.6931283, "lon": 123.1751033}, {"id_individu": "ID000041", "nama": "Rukmin L. Toi", "desa": "DS001", "durian": 20, "alpukat": 10, "mangga": 0, "rambutan": 0, "pala": 0, "tanggal": null, "lat": null, "lon": null}, {"id_individu": "ID000042", "nama": "Irsan P Deto", "desa": "DS001", "durian": 24, "alpukat": 16, "mangga": 0, "rambutan": 0, "pala": 0, "tanggal": "2026-06-08", "lat": null, "lon": null}, {"id_individu": "ID000057", "nama": "Fatma Tahir", "desa": "DS001", "durian": 20, "alpukat": 10, "mangga": 0, "rambutan": 0, "pala": 0, "tanggal": "2026-05-21", "lat": 0.691765, "lon": 123.1707033}, {"id_individu": "ID000059", "nama": "Amina Mooduto", "desa": "DS001", "durian": 24, "alpukat": 16, "mangga": 0, "rambutan": 0, "pala": 0, "tanggal": null, "lat": null, "lon": null}, {"id_individu": "ID000060", "nama": "Ishak Y. Rauf", "desa": "DS001", "durian": 24, "alpukat": 16, "mangga": 0, "rambutan": 0, "pala": 0, "tanggal": null, "lat": null, "lon": null}, {"id_individu": "ID000063", "nama": "Rahim S. Toi", "desa": "DS001", "durian": 20, "alpukat": 10, "mangga": 0, "rambutan": 0, "pala": 0, "tanggal": "2026-05-18", "lat": 0.6922231, "lon": 123.165747}, {"id_individu": "ID000064", "nama": "Ahmad Taga", "desa": "DS001", "durian": 24, "alpukat": 16, "mangga": 0, "rambutan": 0, "pala": 0, "tanggal": "2026-05-22", "lat": 0.6976017, "lon": 123.174385}, {"id_individu": "ID000066", "nama": "Aripin Abdulah", "desa": "DS001", "durian": 24, "alpukat": 16, "mangga": 0, "rambutan": 0, "pala": 0, "tanggal": null, "lat": null, "lon": null}, {"id_individu": "ID000067", "nama": "Junifer Araeng", "desa": "DS001", "durian": 24, "alpukat": 16, "mangga": 0, "rambutan": 0, "pala": 0, "tanggal": "2026-06-08", "lat": 0.6929187, "lon": 123.1587963}, {"id_individu": "ID000069", "nama": "Abdulah Abdali", "desa": "DS001", "durian": 29, "alpukat": 16, "mangga": 0, "rambutan": 0, "pala": 0, "tanggal": "2026-05-19", "lat": 0.7005383, "lon": 123.17341}, {"id_individu": "ID000071", "nama": "Alis Mooduto", "desa": "DS001", "durian": 24, "alpukat": 16, "mangga": 0, "rambutan": 0, "pala": 0, "tanggal": "2026-05-20", "lat": null, "lon": null}, {"id_individu": "ID000075", "nama": "Erni Ibrahim", "desa": "DS001", "durian": 24, "alpukat": 16, "mangga": 0, "rambutan": 0, "pala": 0, "tanggal": "2026-05-21", "lat": 0.6969817, "lon": 123.1711767}, {"id_individu": "ID000084", "nama": "Ariyati Adam", "desa": "DS002", "durian": 10, "alpukat": 10, "mangga": 4, "rambutan": 4, "pala": 5, "tanggal": "2026-05-29", "lat": null, "lon": null}, {"id_individu": "ID000089", "nama": "Ijen Tahir", "desa": "DS002", "durian": 10, "alpukat": 10, "mangga": 4, "rambutan": 4, "pala": 5, "tanggal": "2026-06-01", "lat": null, "lon": null}, {"id_individu": "ID000102", "nama": "Hapsa Karim", "desa": "DS002", "durian": 8, "alpukat": 8, "mangga": 2, "rambutan": 3, "pala": 4, "tanggal": "2026-06-05", "lat": null, "lon": null}, {"id_individu": "ID000107", "nama": "Hajira Isa", "desa": "DS002", "durian": 8, "alpukat": 8, "mangga": 2, "rambutan": 3, "pala": 4, "tanggal": "2026-06-01", "lat": null, "lon": null}, {"id_individu": "ID000110", "nama": "Sipa Hulatali", "desa": "DS002", "durian": 10, "alpukat": 10, "mangga": 4, "rambutan": 4, "pala": 5, "tanggal": "2026-06-01", "lat": null, "lon": null}, {"id_individu": "ID000114", "nama": "Pipin Ibrahim", "desa": "DS002", "durian": 10, "alpukat": 10, "mangga": 4, "rambutan": 4, "pala": 5, "tanggal": "2026-06-01", "lat": null, "lon": null}, {"id_individu": "ID000124", "nama": "Elis Hulatali", "desa": "DS002", "durian": 10, "alpukat": 10, "mangga": 4, "rambutan": 4, "pala": 5, "tanggal": "2026-05-23", "lat": 0.6548205, "lon": 123.1809443}, {"id_individu": "ID000148", "nama": "Nini Japar", "desa": "DS002", "durian": 10, "alpukat": 10, "mangga": 4, "rambutan": 4, "pala": 5, "tanggal": "2026-06-01", "lat": null, "lon": null}, {"id_individu": "ID000163", "nama": "Marni Saban", "desa": "DS001", "durian": 20, "alpukat": 10, "mangga": 0, "rambutan": 0, "pala": 0, "tanggal": null, "lat": null, "lon": null}, {"id_individu": "ID000172", "nama": "Irwan Yohan", "desa": "DS001", "durian": 10, "alpukat": 10, "mangga": 0, "rambutan": 0, "pala": 0, "tanggal": null, "lat": null, "lon": null}, {"id_individu": "ID000173", "nama": "Husain Lamalani", "desa": "DS001", "durian": 24, "alpukat": 16, "mangga": 0, "rambutan": 0, "pala": 0, "tanggal": null, "lat": null, "lon": null}, {"id_individu": "ID000218", "nama": "Malik Podungge", "desa": "DS001", "durian": 20, "alpukat": 10, "mangga": 0, "rambutan": 0, "pala": 0, "tanggal": null, "lat": null, "lon": null}, {"id_individu": "ID000254", "nama": "Yuni Lahabu", "desa": "DS002", "durian": 10, "alpukat": 10, "mangga": 4, "rambutan": 4, "pala": 5, "tanggal": "2026-06-01", "lat": null, "lon": null}, {"id_individu": "ID000280", "nama": "Abas Adam", "desa": "DS002", "durian": 10, "alpukat": 10, "mangga": 4, "rambutan": 4, "pala": 5, "tanggal": "2026-05-29", "lat": null, "lon": null}, {"id_individu": "ID000338", "nama": "Rian Abdulah", "desa": "DS002", "durian": 8, "alpukat": 8, "mangga": 2, "rambutan": 3, "pala": 4, "tanggal": "2026-05-29", "lat": null, "lon": null}, {"id_individu": "ID000346", "nama": "Ismail Lahabu", "desa": "DS002", "durian": 10, "alpukat": 10, "mangga": 4, "rambutan": 4, "pala": 5, "tanggal": "2026-05-23", "lat": 0.6567868, "lon": 123.1810029}, {"id_individu": "ID000348", "nama": "Aripin Tamalati", "desa": "DS002", "durian": 10, "alpukat": 10, "mangga": 4, "rambutan": 4, "pala": 5, "tanggal": "2026-05-29", "lat": 0.6547643, "lon": 123.1814575}, {"id_individu": "ID000353", "nama": "Faldi Ibrahim", "desa": "DS002", "durian": 10, "alpukat": 10, "mangga": 4, "rambutan": 4, "pala": 5, "tanggal": "2026-05-23", "lat": null, "lon": null}, {"id_individu": "ID000359", "nama": "Eri Adam", "desa": "DS002", "durian": 10, "alpukat": 10, "mangga": 4, "rambutan": 4, "pala": 5, "tanggal": "2026-05-23", "lat": null, "lon": null}, {"id_individu": "ID000360", "nama": "Yusup K Baharu", "desa": "DS002", "durian": 10, "alpukat": 10, "mangga": 4, "rambutan": 4, "pala": 5, "tanggal": "2026-05-25", "lat": null, "lon": null}, {"id_individu": "ID000381", "nama": "Mias Amir", "desa": "DS002", "durian": 8, "alpukat": 8, "mangga": 2, "rambutan": 3, "pala": 4, "tanggal": "2026-05-24", "lat": null, "lon": null}, {"id_individu": "ID000383", "nama": "Amir Ntungo", "desa": "DS002", "durian": 10, "alpukat": 10, "mangga": 4, "rambutan": 4, "pala": 5, "tanggal": "2026-05-29", "lat": null, "lon": null}, {"id_individu": "ID000401", "nama": "Rasid Laleno", "desa": "DS001", "durian": 10, "alpukat": 10, "mangga": 0, "rambutan": 0, "pala": 0, "tanggal": null, "lat": null, "lon": null}, {"id_individu": "ID000400", "nama": "Farid Musa", "desa": "DS001", "durian": 5, "alpukat": 0, "mangga": 0, "rambutan": 0, "pala": 0, "tanggal": null, "lat": null, "lon": null}];
+const SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTyAhh_YZ8zNCYELKE3v7i51PCq-W2tp30GWRlFReuyygG0kTGi-stdtjLACdNYIg/pub?gid=390267555&single=true&output=csv";
+
+// ── Helpers ──
+const fmtHa = v => v.toLocaleString('id-ID',{minimumFractionDigits:4,maximumFractionDigits:4});
+const fmtTgl = iso => iso ? new Date(iso+'T00:00:00').toLocaleDateString('id-ID',{day:'numeric',month:'long',year:'numeric'}) : null;
+const JENIS_ICON = {durian:'🌳 Durian',alpukat:'🥑 Alpukat',mangga:'🥭 Mangga',rambutan:'🍒 Rambutan',pala:'🌰 Pala'};
+const BIBIT_ICON = {durian:'🌳',alpukat:'🥑',mangga:'🥭',rambutan:'🍒',pala:'🌰'};
+const STATUS_INFO = {
+  'Tracked':['status-tracked','✅ Lahan & Bibit'],
+  'Tracked-NoBibit':['status-nobibit','🌳 Lahan (Bibit -)'],
+  'Unconfirmed':['status-unconfirmed','⚠️ Tentatif'],
+  'Belum Di-Tracking':['status-belum','❌ Belum Tracking'],
+};
+
+function bibitTable(b){
+  if(!b||b.total===0) return '<div class="warn-box">⚠️ Belum ada data Berita Acara</div>';
+  let rows='';
+  Object.keys(JENIS_ICON).forEach(k=>{if(b[k]>0)rows+=`<tr><td>${JENIS_ICON[k]}</td><td>${b[k]} btg</td></tr>`;});
+  if(b.tanggal) rows+=`<tr><td>📅 Tgl Distribusi</td><td>${fmtTgl(b.tanggal)}</td></tr>`;
+  const fotoHtml = b.foto_url
+    ? `<div class="pp-foto">
+        <img src="${b.foto_url}" alt="Foto distribusi bibit"
+          onerror="this.parentElement.innerHTML='<span style=color:var(--muted);font-size:11px>📸 Foto tidak dapat dimuat</span>'"
+          onclick="window.open('${b.foto_url}','_blank')" title="Klik untuk perbesar">
+      </div>`
+    : '';
+  return `${fotoHtml}<div class="bibit-title">Bibit BA — Total ${b.total} batang</div><table>${rows}</table>`;
+}
+function deriveBulan(t){
+  if(!t) return null;
+  if(t.startsWith('2026-05')) return 'Mei 2026';
+  if(t.startsWith('2026-06')) return 'Juni 2026';
+  return null;
+}
+// Konversi link Google Drive → URL gambar yang bisa di-embed
+function driveToImg(url){
+  if(!url||url.trim()==='') return null;
+  url = url.trim();
+  // format: drive.google.com/file/d/ID/view atau /open
+  const m1 = url.match(/\/file\/d\/([^\/\?]+)/);
+  if(m1) return `https://lh3.googleusercontent.com/d/${m1[1]}`;
+  // format: id=ID
+  const m2 = url.match(/[?&]id=([^&]+)/);
+  if(m2) return `https://lh3.googleusercontent.com/d/${m2[1]}`;
+  // sudah berupa direct link lh3 atau thumbnail
+  if(url.includes('lh3.google')||url.includes('thumbnail')) return url;
+  return null;
+}
+
+function normalizeBibitRow(row){
+  const num=v=>{const n=parseFloat(v);return isNaN(n)?0:n;};
+  // id_individu bisa dari kolom 'id_individu' langsung (fallback) atau dari VLOOKUP sheet
+  const id=(row.id_individu??'').toString().trim();
+  if(!id||id==='CONTOH'||id.startsWith('CONTOH')) return null;
+  // nama: sheet pakai 'nama_petani', fallback pakai 'nama'
+  const nama=(row.nama_petani||row.nama||'').toString().trim();
+  // desa: sheet pakai 'desa' langsung
+  const desa=(row.desa||'').toString().trim();
+  // tanggal: sheet pakai 'tanggal_distribusi', fallback 'tanggal'
+  const tanggal=(row.tanggal_distribusi||row.tanggal||'').toString().trim()||null;
+  // foto_url
+  const fotoRaw=(row.foto_url||'').toString().trim();
+  return {
+    id_individu:id, nama, desa,
+    durian:num(row.durian),alpukat:num(row.alpukat),mangga:num(row.mangga),
+    rambutan:num(row.rambutan),pala:num(row.pala),
+    tanggal, foto_url: driveToImg(fotoRaw),
+    lat:(row.lat!==''&&row.lat!=null&&!isNaN(parseFloat(row.lat)))?parseFloat(row.lat):null,
+    lon:(row.lon!==''&&row.lon!=null&&!isNaN(parseFloat(row.lon)))?parseFloat(row.lon):null,
+  };
+}
+
+// ── Build data ──
+function buildRecipientsAndPolygons(polygonsRaw,bibitRows){
+  const bibitMap=new Map();
+  bibitRows.forEach(r=>bibitMap.set(r.id_individu,r));
+  const polyByIndiv=new Map();
+  polygonsRaw.forEach(p=>{
+    if(!polyByIndiv.has(p.id_individu))polyByIndiv.set(p.id_individu,[]);
+    polyByIndiv.get(p.id_individu).push(p);
+  });
+  const recipients=[];
+  const handled=new Set();
+  const bibitFields=b=>b?{durian:b.durian,alpukat:b.alpukat,mangga:b.mangga,rambutan:b.rambutan,pala:b.pala,
+    total:b.durian+b.alpukat+b.mangga+b.rambutan+b.pala,tanggal:b.tanggal,bulan:deriveBulan(b.tanggal)}
+    :{durian:0,alpukat:0,mangga:0,rambutan:0,pala:0,total:0,tanggal:null,bulan:null};
+
+  polyByIndiv.forEach((plist,idv)=>{
+    const b=bibitMap.get(idv);
+    const unconf=plist.some(p=>p.unconfirmed);
+    const active=plist.filter(p=>!p.unconfirmed);
+    let status=unconf?'Unconfirmed':b?'Tracked':'Tracked-NoBibit';
+    const luas=unconf?plist.find(p=>p.unconfirmed)?.luas_ha:active.reduce((s,p)=>s+p.luas_ha,0);
+    const loc=[plist.reduce((s,p)=>s+p.centroid[0],0)/plist.length,plist.reduce((s,p)=>s+p.centroid[1],0)/plist.length];
+    recipients.push({id_individu:idv,nama:plist[0].nama,desa:plist[0].desa,status,...bibitFields(b),loc,luas_ha:luas?Math.round(luas*10000)/10000:null,n_plot:active.length});
+    handled.add(idv);
+  });
+  bibitRows.forEach(b=>{
+    if(handled.has(b.id_individu))return;
+    const loc=(b.lat!=null&&b.lon!=null)?[b.lat,b.lon]:null;
+    recipients.push({id_individu:b.id_individu,nama:b.nama,desa:b.desa,status:'Belum Di-Tracking',...bibitFields(b),loc,luas_ha:null,n_plot:0});
+  });
+  const polygons=polygonsRaw.map(p=>({...p,bibit:bibitMap.has(p.id_individu)?bibitFields(bibitMap.get(p.id_individu)):null}));
+  return{recipients,polygons};
+}
+
+function computeSummary(recipients,polygons){
+  const active=polygons.filter(p=>!p.unconfirmed);
+  const bt={durian:0,alpukat:0,mangga:0,rambutan:0,pala:0,total:0};
+  const baRecip=recipients.filter(r=>r.status!=='Tracked-NoBibit');
+  baRecip.forEach(r=>['durian','alpukat','mangga','rambutan','pala'].forEach(k=>{bt[k]+=r[k];bt.total+=r[k];}));
+  // deduplicate
+  bt.total=bt.durian+bt.alpukat+bt.mangga+bt.rambutan+bt.pala;
+  return{
+    total_luas_aktif_ha:active.reduce((s,p)=>s+p.luas_ha,0),target_ha:25,
+    desa001_ha:active.filter(p=>p.desa==='DS001').reduce((s,p)=>s+p.luas_ha,0),
+    desa002_ha:active.filter(p=>p.desa==='DS002').reduce((s,p)=>s+p.luas_ha,0),
+    total_ba_recipients:baRecip.length,
+    tracked:baRecip.filter(r=>r.status==='Tracked').length,
+    belum_tracking_dgn_gps:recipients.filter(r=>r.status==='Belum Di-Tracking'&&r.loc).length,
+    belum_tracking_tanpa_gps:recipients.filter(r=>r.status==='Belum Di-Tracking'&&!r.loc).length,
+    total_polygon_features:active.length,
+    total_individu_tracked:new Set(active.map(p=>p.id_individu)).size,
+    bibit_totals:bt,
+  };
+}
+
+// ── Render ──
+let polyItems=[],markerItems=[];
+let filterDesa='Semua',filterBulan='Semua';
+const filterJenis=new Set();
+let _map,_recipients,_summary;
+
+function render(polygons,recipients,summary){
+  document.getElementById('loading-banner').style.display='none';
+  _recipients=recipients; _summary=summary;
+
+  // ── Isi tab Lahan ──
+  const luas=summary.total_luas_aktif_ha;
+  const pct=(luas/summary.target_ha*100).toFixed(1);
+  document.getElementById('tl-ha').textContent=fmtHa(luas);
+  document.getElementById('tl-pct').textContent=pct+'%';
+  document.getElementById('tl-bar').style.width=Math.min(pct,100)+'%';
+  document.getElementById('tl-ds1').textContent=fmtHa(summary.desa001_ha)+' Ha';
+  document.getElementById('tl-ds2').textContent=fmtHa(summary.desa002_ha)+' Ha';
+  document.getElementById('tl-plot').textContent=summary.total_polygon_features;
+
+  // ── Isi tab Bibit ──
+  const bt=summary.bibit_totals;
+  document.getElementById('tb-durian').textContent=bt.durian;
+  document.getElementById('tb-alpukat').textContent=bt.alpukat;
+  document.getElementById('tb-mangga').textContent=bt.mangga;
+  document.getElementById('tb-rambutan').textContent=bt.rambutan;
+  document.getElementById('tb-pala').textContent=bt.pala;
+  document.getElementById('tb-total').textContent=bt.total.toLocaleString('id-ID');
+  document.getElementById('tb-penerima').textContent=summary.total_ba_recipients+' penerima';
+  document.getElementById('recipient-total-count').textContent=recipients.length;
+
+  // ── Map ──
+  _map = L.map('map',{zoomControl:false}).setView([0.677,123.169],13);
+  const esri=L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+    {attribution:'Tiles © Esri',maxZoom:19}).addTo(_map);
+  const osm=L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+    {attribution:'© OpenStreetMap contributors',maxZoom:19});
+
+  // Navigasi: zoom + skala + kompas (north arrow)
+  L.control.zoom({position:'topleft'}).addTo(_map);
+  L.control.scale({position:'bottomleft',imperial:false,metric:true}).addTo(_map);
+
+  // North arrow custom control
+  const NorthArrow=L.Control.extend({
+    options:{position:'topleft'},
+    onAdd:()=>{
+      const div=L.DomUtil.create('div','leaflet-bar leaflet-control');
+      div.style.cssText='background:rgba(22,27,34,.9);border:1px solid #30363d!important;width:32px;height:32px;display:flex;align-items:center;justify-content:center;cursor:default;border-radius:4px;';
+      div.title='Arah Utara';
+      div.innerHTML=`<svg width="20" height="20" viewBox="0 0 20 20">
+        <polygon points="10,2 13,10 10,8 7,10" fill="#f85149"/>
+        <polygon points="10,18 7,10 10,12 13,10" fill="#8b949e"/>
+        <text x="10" y="5.5" text-anchor="middle" font-size="4.5" fill="#f85149" font-weight="bold" font-family="sans-serif">U</text>
+      </svg>`;
+      L.DomEvent.disableClickPropagation(div);
+      return div;
+    }
+  });
+  new NorthArrow().addTo(_map);
+
+  // Layers
+  const trackedLayer=L.featureGroup();
+  const unconfLayer=L.featureGroup();
+  const markerLayer=L.featureGroup();
+  polyItems=[]; markerItems=[];
+
+  polygons.forEach(p=>{
+    const color=p.desa==='DS001'?'#3fb950':'#58a6ff';
+    if(p.unconfirmed){
+      const style={color:'#d29922',weight:2,dashArray:'6,5',fillColor:'#d29922',fillOpacity:.10};
+      const poly=L.polygon(p.coordinates,style);
+      poly.bindPopup(`<div class="pp"><h4>${p.nama} <span style="color:#d29922">(Tentatif)</span></h4>
+        <div class="pp-badges"><span class="badge ds002">${p.desa}</span> <span class="badge" style="background:rgba(210,153,34,.15);color:#d29922">BELUM DIKONFIRMASI</span></div>
+        <table><tr><td>Luas (GPS)</td><td>${fmtHa(p.luas_ha)} Ha</td></tr><tr><td>Gender</td><td>${p.gender}</td></tr></table>
+        <div class="warn-box">⚠️ Kepemilikan belum terverifikasi lapangan.</div>
+        ${bibitTable(p.bibit)}</div>`);
+      poly.addTo(unconfLayer);
+      const baseStyle={...style};
+      polyItems.push({layer:poly,group:unconfLayer,data:p,_baseStyle:baseStyle});
+      return;
+    }
+    const style={color,weight:2,fillColor:color,fillOpacity:.32};
+    const poly=L.polygon(p.coordinates,style);
+    poly.bindPopup(`<div class="pp"><h4>${p.nama}</h4>
+      <div class="pp-badges"><span class="badge ${p.desa.toLowerCase()}">${p.desa}</span> <span class="badge" style="background:rgba(255,255,255,.08);color:#e6edf3">${p.id_lahan}</span></div>
+      <table>
+        <tr><td>Luas (GPS)</td><td>${fmtHa(p.luas_ha)} Ha</td></tr>
+        <tr><td>Gender</td><td>${p.gender}</td></tr>
+        <tr><td>ID Individu</td><td>${p.id_individu}</td></tr>
+      </table>${bibitTable(p.bibit)}</div>`);
+    poly.bindTooltip(p.nama,{sticky:true,className:'plot-tooltip'});
+    poly.addTo(trackedLayer);
+    polyItems.push({layer:poly,group:trackedLayer,data:p,_baseStyle:{...style}});
+  });
+
+  // Titik referensi GPS (belum ada polygon)
+  recipients.filter(r=>r.status==='Belum Di-Tracking'&&r.loc).forEach(r=>{
+    const style={radius:7,color:'#d29922',weight:2,fillColor:'#d29922',fillOpacity:.75};
+    const marker=L.circleMarker(r.loc,style);
+    marker.bindPopup(`<div class="pp"><h4>${r.nama} ⚠️</h4>
+      <div class="pp-badges"><span class="badge ${r.desa.toLowerCase()}">${r.desa}</span> <span class="badge" style="background:rgba(210,153,34,.15);color:#d29922">BELUM DI-TRACKING</span></div>
+      <table><tr><td>ID Individu</td><td>${r.id_individu}</td></tr>
+      <tr><td>Lahan</td><td>Belum ada polygon GPS</td></tr></table>
+      <div class="note" style="margin-top:6px">Koordinat ini dari titik distribusi bibit — dapat dijadikan titik awal GPS tracking lahan.</div>
+      ${bibitTable(r)}</div>`);
+    marker.addTo(markerLayer);
+    markerItems.push({layer:marker,group:markerLayer,data:r,_baseStyle:{...style}});
+  });
+
+  trackedLayer.addTo(_map); unconfLayer.addTo(_map); markerLayer.addTo(_map);
+  const allLayers=L.featureGroup([trackedLayer,unconfLayer,markerLayer]);
+  if(allLayers.getLayers().length) _map.fitBounds(allLayers.getBounds(),{padding:[28,28]});
+
+  L.control.layers(
+    {'🛰️ Satelit':esri,'🗺️ OpenStreetMap':osm},
+    {'Lahan ter-tracking':trackedLayer,'Titik GPS (belum poligon)':markerLayer},
+    {collapsed:true}
+  ).addTo(_map);
+
+  // Filter logic
+  function matchFilter(desa,bibit){
+    if(filterDesa!=='Semua'&&desa!==filterDesa) return false;
+    if(filterBulan!=='Semua'){
+      if(filterBulan==='Tanpa Data'){if(bibit&&bibit.bulan)return false;}
+      else{if(!bibit||bibit.bulan!==filterBulan)return false;}
+    }
+    if(filterJenis.size>0){if(!bibit)return false;let any=false;filterJenis.forEach(j=>{if(bibit[j]>0)any=true;});if(!any)return false;}
+    return true;
+  }
+
+  function applyFilters(){
+    let visLuas=0,visCount=0;
+    const baMatchIds=new Set(),baTotalIds=new Set();
+    polyItems.forEach(it=>{
+      const ok=matchFilter(it.data.desa,it.data.bibit);
+      if(ok&&!it.group.hasLayer(it.layer))it.layer.addTo(it.group);
+      if(!ok&&it.group.hasLayer(it.layer))it.group.removeLayer(it.layer);
+      if(ok&&!it.data.unconfirmed){visLuas+=it.data.luas_ha;visCount++;}
+    });
+    markerItems.forEach(it=>{
+      const ok=matchFilter(it.data.desa,it.data);
+      if(ok&&!it.group.hasLayer(it.layer))it.layer.addTo(it.group);
+      if(!ok&&it.group.hasLayer(it.layer))it.group.removeLayer(it.layer);
+    });
+    recipients.filter(r=>r.status!=='Tracked-NoBibit').forEach(r=>{
+      if(matchFilter(r.desa,r)){
+        baTotalIds.add(r.id_individu);
+        if(r.status==='Tracked')baMatchIds.add(r.id_individu);
+      }
+    });
+    // apply chip highlight juga saat filter berubah
+    applyChipHighlight();
+    renderRecipients();
+    document.getElementById('filter-luas').textContent=fmtHa(visLuas);
+    document.getElementById('filter-count').textContent=visCount;
+    document.getElementById('filter-ba').textContent=baMatchIds.size+' / '+baTotalIds.size;
+  }
+  window.applyFilters=applyFilters;
+
+  // Sidebar kiri
+  function focusOnMap(idv,loc){
+    document.getElementById('map').scrollIntoView({behavior:'smooth',block:'start'});
+    _map.flyTo(loc,17,{duration:.6});
+    const pm=polyItems.find(it=>it.data.id_individu===idv&&it.group.hasLayer(it.layer));
+    if(pm){setTimeout(()=>pm.layer.openPopup(),700);return;}
+    const mm=markerItems.find(it=>it.data.id_individu===idv&&it.group.hasLayer(it.layer));
+    if(mm){setTimeout(()=>mm.layer.openPopup(),700);}
+  }
+
+  function renderRecipients(){
+    const term=document.getElementById('recipient-search').value.trim().toLowerCase();
+    const listEl=document.getElementById('recipient-list');
+    listEl.innerHTML='';
+    let shown=0;
+    recipients
+      .filter(r=>{
+        if(!matchFilter(r.desa,r))return false;
+        if(term&&!r.nama.toLowerCase().includes(term))return false;
+        return true;
+      })
+      .sort((a,b)=>a.nama.localeCompare(b.nama))
+      .forEach(r=>{
+        shown++;
+        const [sc,sl]=STATUS_INFO[r.status];
+        const bibitParts=[];
+        Object.keys(BIBIT_ICON).forEach(k=>{if(r[k]>0)bibitParts.push(`${BIBIT_ICON[k]}${r[k]}`);});
+        let line=bibitParts.length?`${bibitParts.join('&nbsp;')} · Σ${r.total}btg`:`<span style="color:var(--muted)">Belum ada BA</span>`;
+        if(r.luas_ha)line+=` | 📐${fmtHa(r.luas_ha)}Ha`;
+        const noGps=!r.loc;
+        const card=document.createElement('div');
+        card.className='recipient-card'+(noGps?' no-click':'');
+        if(noGps)card.style.opacity='.55';
+        card.innerHTML=`
+          <div class="rc-top"><span class="rc-name">${r.nama}</span>
+            <span class="badge ${r.desa.toLowerCase()}">${r.desa.replace('DS00','DS')}</span></div>
+          <div class="rc-top" style="margin-top:3px">
+            <span class="badge ${sc}">${sl}</span>
+            ${noGps?'<span class="badge nogeo">📍 no GPS</span>':''}
+          </div>
+          <div class="rc-bibit">${line}</div>`;
+        if(!noGps){
+          card.addEventListener('click',()=>{
+            document.querySelectorAll('.recipient-card').forEach(c=>c.classList.remove('highlighted'));
+            card.classList.add('highlighted');
+            focusOnMap(r.id_individu,r.loc);
+          });
+        }
+        listEl.appendChild(card);
+      });
+    document.getElementById('recipient-count-text').textContent=
+      `Menampilkan ${shown} dari ${recipients.length} petani · ${summary.total_ba_recipients} penerima bibit`;
+  }
+  window.renderRecipients=renderRecipients;
+
+  document.getElementById('recipient-search').addEventListener('input',renderRecipients);
+
+  // Pill filter
+  function setupSingle(containerId,onChange){
+    document.querySelectorAll(`#${containerId} .pill`).forEach(btn=>{
+      btn.addEventListener('click',()=>{
+        document.querySelectorAll(`#${containerId} .pill`).forEach(b=>b.classList.remove('active'));
+        btn.classList.add('active');
+        onChange(btn.dataset.val);
+        applyFilters();
+      });
+    });
+  }
+  setupSingle('filter-desa',v=>filterDesa=v);
+  setupSingle('filter-bulan',v=>filterBulan=v);
+  document.querySelectorAll('#filter-jenis .pill').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      btn.classList.toggle('active');
+      const j=btn.dataset.val;
+      if(btn.classList.contains('active')){filterJenis.add(j);activeChips.add(j);document.getElementById('chip-'+j).classList.add('active-chip');}
+      else{filterJenis.delete(j);activeChips.delete(j);document.getElementById('chip-'+j).classList.remove('active-chip');}
+      applyFilters();
+    });
+  });
+  document.getElementById('btn-reset').addEventListener('click',()=>{
+    filterDesa='Semua';filterBulan='Semua';filterJenis.clear();activeChips.clear();
+    document.querySelectorAll('.pill').forEach(b=>b.classList.remove('active'));
+    document.querySelector('#filter-desa .pill[data-val="Semua"]').classList.add('active');
+    document.querySelector('#filter-bulan .pill[data-val="Semua"]').classList.add('active');
+    document.querySelectorAll('.bibit-chip').forEach(c=>c.classList.remove('active-chip'));
+    polyItems.forEach(it=>it.layer.setStyle(it._baseStyle));
+    markerItems.forEach(it=>it.layer.setStyle(it._baseStyle));
+    applyFilters();
+  });
+
+  applyFilters();
+}
+
+// ── Bootstrap ──
+let _dataSource = 'fallback'; // 'sheet' atau 'fallback'
+let _loadTime = null;
+
+function updateStatusBar(){
+  const sb = document.getElementById('status-bar');
+  const now = new Date();
+  const fmt = d => d.toLocaleString('id-ID',{day:'2-digit',month:'short',year:'numeric',
+    hour:'2-digit',minute:'2-digit'});
+  const src = _dataSource === 'sheet'
+    ? `<div class="sb-item"><div class="sb-dot green"></div><span>Data dari <span class="sb-val">Google Sheet</span></span></div>`
+    : `<div class="sb-item"><div class="sb-dot yellow"></div><span>Data <span class="sb-val">cadangan</span> (Sheet belum tersambung)</span></div>`;
+  sb.innerHTML = `
+    ${src}
+    <span style="color:var(--border)">|</span>
+    <div class="sb-item">⏱️ Dimuat: <span class="sb-val">${fmt(_loadTime||now)}</span></div>
+    <span style="color:var(--border)">|</span>
+    <div class="sb-item">🗺️ Poligon: <span class="sb-val">polygons.json</span></div>
+    <div style="margin-left:auto;font-size:10px;opacity:.6">Refresh halaman untuk data terbaru</div>`;
+}
+
+function startApp(polygonsRaw,rawBibitRows){
+  _loadTime = new Date();
+  const bibitRows=rawBibitRows.map(normalizeBibitRow).filter(r=>r!==null);
+  const{recipients,polygons}=buildRecipientsAndPolygons(polygonsRaw,bibitRows);
+  const summary=computeSummary(recipients,polygons);
+  render(polygons,recipients,summary);
+  updateStatusBar();
+}
+
+function fetchPolygons(){return fetch(POLYGONS_FILE).then(r=>{if(!r.ok)throw new Error('HTTP '+r.status);return r.json();});}
+function fetchBibit(){
+  return new Promise(resolve=>{
+    if(SHEET_CSV_URL&&SHEET_CSV_URL.indexOf('http')===0){
+      Papa.parse(SHEET_CSV_URL,{download:true,header:true,skipEmptyLines:true,
+        complete:res=>{_dataSource='sheet';resolve(res.data);},
+        error:()=>{
+          _dataSource='fallback';
+          document.getElementById('loading-banner').textContent='⚠️ Gagal memuat Sheet, menampilkan data cadangan.';
+          resolve(FALLBACK_BIBIT);
+        }
+      });
+    } else {_dataSource='fallback';resolve(FALLBACK_BIBIT);}
+  });
+}
+
+document.getElementById('loading-banner').textContent='⏳ Memuat data lahan & bibit...';
+Promise.all([fetchPolygons(),fetchBibit()])
+  .then(([p,b])=>startApp(p,b))
+  .catch(()=>{document.getElementById('loading-banner').textContent='⚠️ Gagal memuat polygons.json. Pastikan file ada di folder yang sama.';});
+</script>
+</body>
+</html>
